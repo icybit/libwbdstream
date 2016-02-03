@@ -10,18 +10,23 @@
 
 using namespace std;
 
-void GenerateRandomPair(int & x, int & y);
-void PrintTable(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS]);
+
 void UpdateDensities(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now);
 void InitialClustering(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now);
 void AdjustClustering(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now);
 void RemoveSporadic(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS]);
+float EstimatedDensitiesSum(unsigned __int64 time_now);
+
+
+void GenerateRandomPair(int & x, int & y);
+void PrintTable(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now);
 
 int main() {
 	int x, y;
 	unsigned __int64 time_now = 0;
 	unsigned __int64 gap = 0;
 	CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS];
+	
 	for (int i = 0; i < DIMENSIONS; i++) 
 	{
 		for (int j = 0; j < DIMENSIONS; j++) 
@@ -29,7 +34,6 @@ int main() {
 			grid_list[i][j] = nullptr;
 		}
 	}
-
 	for (int i = 0; i < NO_OF_CYCLES; i++)
 	{
 		GenerateRandomPair(x, y);
@@ -41,7 +45,7 @@ int main() {
 		{
 			grid_list[x][y]->AddRecord(time_now);
 		}
-		if (time_now == gap)
+		/*if (time_now == gap)
 		{
 			InitialClustering(grid_list);
 		}
@@ -49,10 +53,12 @@ int main() {
 		{
 			RemoveSporadic(grid_list);
 			AdjustClustering(grid_list);
-		}
-
+		}*/
+		time_now++;
 	}
-	PrintTable(grid_list);
+	time_now--;
+	UpdateDensities(grid_list, time_now);
+	PrintTable(grid_list, time_now);
 	return 0;
 }
 
@@ -89,25 +95,34 @@ void GenerateRandomPair(int & x, int & y)
 	y = rand() % DIMENSIONS;
 }
 
-void PrintTable(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS])
+float EstimatedDensitiesSum(unsigned __int64 time_now)
 {
-	cout << "-----------------------------------------" << endl;
+	float estimated_sum = (1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR);
+	return estimated_sum;
+}
+
+void PrintTable(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now)
+{
+	cout << "------------------------------------------------------------------------" << endl;
+	cout << setprecision(3);
 	float sum = 0;
 	for (int i = 0; i < DIMENSIONS; i++)
 	{
 		for (int j = 0; j < DIMENSIONS; j++)
 			if (grid_list[i][j] != nullptr)
 			{
-				cout << "|" << setw(3) << grid_list[i][j]->get_density();
+				cout << "|" << setw(6) << grid_list[i][j]->get_density();
 				sum += grid_list[i][j]->get_density();
 			}
 			else
 			{
-				cout << "|" << setw(3) << 0;
+				cout << "|" << setw(6) << 0;
 			}
 		cout << "|" << endl;
-		cout << "-----------------------------------------" << endl;
+		cout << "-----------------------------------------------------------------------" << endl;
 	}
+	cout << "Time now: " << time_now << endl;
 	cout << "Cycles: " << NO_OF_CYCLES << endl;
 	cout << "Sum: " << sum << endl;
+	cout << "Estimated sum: " << EstimatedDensitiesSum(time_now);
 }
