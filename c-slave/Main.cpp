@@ -6,7 +6,12 @@
 #include <iomanip>
 
 #define DIMENSIONS 10
+#define TOTAL_GRIDS DIMENSIONS*DIMENSIONS
 #define NO_OF_CYCLES 50
+
+// Parameters controlling the treshold to recognize dense and sparse grids;
+#define DENSE_PARAM 3
+#define SPARSE_PARAM 0.8
 
 using namespace std;
 
@@ -16,6 +21,7 @@ void InitialClustering(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS],
 void AdjustClustering(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now);
 void RemoveSporadic(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS]);
 float EstimatedDensitiesSum(unsigned __int64 time_now);
+float DensityThreshold(unsigned __int64 time_updated, unsigned __int64 time_now);
 
 
 void GenerateRandomPair(int & x, int & y);
@@ -62,6 +68,16 @@ int main() {
 	return 0;
 }
 
+float DensityThreshold(unsigned __int64 time_updated, unsigned __int64 time_now)
+{
+	float threshold = 0.0f;
+	// (27) - research paper
+	float numerator = SPARSE_PARAM * (1 - pow(DECAY_FACTOR, time_now - time_updated + 1));
+	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
+	threshold = numerator / denumerator;
+	return threshold;
+}
+
 void UpdateDensities(CharacteristicVector * grid_list[DIMENSIONS][DIMENSIONS], unsigned __int64 time_now)
 {
 	for (int i = 0; i < DIMENSIONS; i++) 
@@ -97,7 +113,7 @@ void GenerateRandomPair(int & x, int & y)
 
 float EstimatedDensitiesSum(unsigned __int64 time_now)
 {
-	float estimated_sum = (1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR);
+	float estimated_sum = (1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR); // up from (8) - research paper
 	return estimated_sum;
 }
 
