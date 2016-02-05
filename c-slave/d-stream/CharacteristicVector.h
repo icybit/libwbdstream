@@ -1,16 +1,10 @@
 #pragma once
 
 #define NO_CLASS 0
-#define DECAY_FACTOR 0.998
+#define DECAY_FACTOR 0.998f
 
 class CharacteristicVector
-{
-private:
-	unsigned __int64 time_updated_;
-	unsigned __int64 time_created_;
-	float density_;
-	unsigned int label_; //cluster label
-	bool status_; //is sporadic?	
+{	
 public:
 	CharacteristicVector();
 
@@ -36,7 +30,7 @@ public:
 		return time_updated_;
 	}
 
-	unsigned __int64 get_time_removed() {
+	unsigned __int64 get_time_created() {
 		return time_created_;
 	}
 	
@@ -48,7 +42,12 @@ public:
 	//Returns status, is grid sporadic 
 	bool is_sporadic() { return status_; }
 
+private:
+	unsigned __int64 time_updated_;
+	unsigned __int64 time_created_;
+	float density_;
+	unsigned int label_; //cluster label
+	bool status_; //is sporadic?
 	
-
 };
 

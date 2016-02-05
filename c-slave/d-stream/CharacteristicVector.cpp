@@ -23,7 +23,7 @@ CharacteristicVector::CharacteristicVector(unsigned __int64 time_created)
 
 void CharacteristicVector::UpdateDensity(unsigned __int64 time_now)
 {
-	this->density_ = pow(DECAY_FACTOR, (double)(time_now - this->time_updated_)) * density_; // (5) - research paper
+	this->density_ = (float)pow(DECAY_FACTOR, (double)(time_now - this->time_updated_)) * density_; // (5) - research paper
 	this->time_updated_ = time_now;
 }
 
