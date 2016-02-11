@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STM_D_STREAM_CHARACTERISTIC_VECTOR_H_
+#define STM_D_STREAM_CHARACTERISTIC_VECTOR_H_
 
 #define NO_CLASS 0
 #define DECAY_FACTOR 0.998f
@@ -51,3 +52,4 @@ private:
 	
 };
 
+#endif // !STM_D_STREAM_CHARACTERISTIC_VECTOR_H_

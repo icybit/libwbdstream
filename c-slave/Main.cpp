@@ -1,4 +1,5 @@
 #include "d-stream\CharacteristicVector.h"
+#include "d-stream\Cluster.h"
 
 #include <stdlib.h>
 #include <chrono>
@@ -20,7 +21,7 @@ using namespace std;
 #define C_L 0.8f // max threshold for sparse grid
 
 typedef CharacteristicVector * Gridlist[DIMENSIONS][DIMENSIONS];
-typedef unordered_map<int, vector<tuple<int, int>>> Clusters;
+typedef unordered_map<int, Cluster> Clusters;
 
 
 void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now);
@@ -138,10 +139,10 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 	//
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
-		for (int i = 0; i < it->second.size(); i++)
+		for (int i = 0; i < it->second.get_size(); i++)
 		{
-			int smth = it->second.size();
-			grid = it->second.at(i);
+			int smth = it->second.get_label();
+			grid = it->second.GetElement(i);
 			GetNeighbors(grid, neighbors);
 			for (int j = 0; j < 4; j++)
 			{
@@ -153,32 +154,28 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 					{
 						if (label != NO_CLASS)
 						{
-							if (it->second.size() >= clusters[label].size())
+							if (it->second.get_size() >= clusters[label].get_size())
 							{
-								for (int k = clusters[label].size() - 1; k >= 0; k--)
+								for (int k = 0; k > clusters[label].get_size(); k++)
 								{
-									grid_to_transfer = clusters[label].at(k);
-									clusters[label].pop_back();
-									it->second.push_back(grid_to_transfer);
-									tie(x_t, y_t) = grid_to_transfer;
+									clusters[label].GetPair(k, x_t, y_t);
 									grid_list[x_t][y_t]->set_label(it->first);
 								}
+								it->second.MergeClusters(&clusters[label]);
 							}
 							else {
-								for (int k = it->second.size() - 1; k >= 0; k--)
+								for (int k = 0; k < it->second.get_size(); k++)
 								{
-									grid_to_transfer = it->second.at(k);
-									it->second.pop_back();
-									clusters[label].push_back(grid_to_transfer);
-									tie(x_t, y_t) = grid_to_transfer;
+									it->second.GetPair(k, x_t, y_t);
 									grid_list[x_t][y_t]->set_label(label);
 								}
+								clusters[label].MergeClusters(&it->second);
 							}
 						}
 						else if (grid_list[x][y]->get_density() >= d_l)
 						{
 							grid_list[x][y]->set_label(it->first);
-							it->second.push_back(make_tuple(x, y));
+							it->second.AddElement(make_tuple(x, y));
 						}
 					}
 				}
@@ -209,8 +206,7 @@ void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m
 			if (grid_list[i][j] != nullptr && grid_list[i][j]->get_density() >= d_m)
 			{
 				grid_list[i][j]->set_label(n);
-				clusters[n].push_back(make_tuple(i, j));
-				int pf = get<0>(clusters[n].at(0));
+				clusters[n].AddElement(make_tuple(i, j));
 				n++;
 			}
 		}
@@ -293,13 +289,15 @@ void PrintTable(Gridlist & grid_list, unsigned __int64 time_now)
 
 void PrintClusters(Clusters & clusters)
 {
+	int x, y;
 	cout << endl;
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
 		cout << "Cluster #" << it->first << ":" << endl;
-		for (unsigned int i = 0; i < it->second.size(); i++)
-		{
-			cout << "Grid:     " << get<0>(it->second.at(i)) << " : " << get<1>(it->second.at(i)) << endl;
+		for (unsigned int i = 0; i < it->second.get_size(); i++)
+		{	
+			it->second.GetPair(i, x, y);
+			cout << "Grid:     " << x << " : " << y << endl;
 		}
 	}
 }
