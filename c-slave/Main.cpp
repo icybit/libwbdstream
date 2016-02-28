@@ -8,7 +8,6 @@
 
 #include <tuple>
 #include <unordered_map>
-#include <vector>
 
 using namespace std;
 
@@ -20,22 +19,25 @@ using namespace std;
 #define C_M 3.0f // min threshold for dense grid
 #define C_L 0.8f // max threshold for sparse grid
 
+#define OUTSIDE_GRID_BOUNDARY 3 // =<3 grid is OUTSIDE grid
+
 typedef CharacteristicVector * Gridlist[DIMENSIONS][DIMENSIONS];
 typedef unordered_map<int, Cluster> Clusters;
 
 
-void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now);
+void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l);
 void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int64 time_now, float d_m, float d_l);
-void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now);
+void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l);
 void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now);
 float EstimatedDensitiesSum(unsigned __int64 time_now);
 int CalculateGapTime();
 float DensityThreshold(unsigned __int64 time_updated, unsigned __int64 time_now);
-void CalculateDensityThresholds(float & d_m, float & d_l);
+void CalculateDensityParams(float & d_m, float & d_l);
+bool IsSporadic(float density, unsigned __int64 time_updated, unsigned __int64 time_now);
 
 
 void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m);
-void GetNeighbors(tuple<int, int> & pair, tuple<int, int> neighbors[4]);
+void GetNeighbors(GridTuple & pair, tuple<int, int> neighbors[4]);
 
 
 void GenerateRandomPair(int & x, int & y, int counter);
@@ -52,8 +54,7 @@ int main() {
 
 	Gridlist grid_list;
 	Clusters clusters;
-
-	CalculateDensityThresholds(d_m, d_l);
+	CalculateDensityParams(d_m, d_l);
 	// fake d_m - just for testing;
 	d_m = 5;
 	//gap = CalculateGapTime(); 
@@ -82,17 +83,18 @@ int main() {
 		}
 		else if(time_now % gap == 0)
 		{
-			RemoveSporadic(grid_list, time_now);
-			AdjustClustering(grid_list, time_now);
+			AdjustClustering(grid_list, time_now, d_m, d_l);
 		}
 		time_now++;
 	}
 	time_now--;
 	
-	UpdateDensities(grid_list, time_now);
+	UpdateDensities(grid_list, time_now, d_m, d_l);
 	InitialClustering(grid_list, clusters, time_now, d_m, d_l);
 	PrintClusters(clusters);
 	PrintTable(grid_list, time_now);
+	cout << "Press enter to exit." << endl;
+	cin.ignore();
 	return 0;
 }
 
@@ -104,6 +106,17 @@ float DensityThreshold(unsigned __int64 time_updated, unsigned __int64 time_now)
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	threshold = numerator / denumerator;
 	return threshold;
+}
+
+bool IsSporadic(float density, unsigned __int64 time_updated, unsigned __int64 time_now)
+{
+	bool is_sporadic = false;
+	float density_threshold;
+	density_threshold = DensityThreshold(time_updated, time_now);
+	if (density < density) {
+		is_sporadic = true;
+	}
+	return is_sporadic;
 }
 
 int CalculateGapTime() {
@@ -129,53 +142,58 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 	int x, y; // coordinates of analyzed neighbor;
 	int x_t, y_t; // coordinates of grid to transfer;
 	unsigned int label;
-	tuple<int, int> grid;
+	GridTuple grid;
 	tuple<int, int> neighbors[4];
-	tuple<int, int> grid_to_transfer;
-	UpdateDensities(grid_list, time_now);
+	
+	UpdateDensities(grid_list, time_now, d_m, d_l);
 	CreateDistinctClusters(grid_list, clusters, d_m);
 	//
 	PrintClusters(clusters);
 	//
+	// Iterate through all clusters
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
+		// Iterate through each element of cluster (grids might be added during iteration)
 		for (int i = 0; i < it->second.get_size(); i++)
 		{
-			int smth = it->second.get_label();
 			grid = it->second.GetElement(i);
-			GetNeighbors(grid, neighbors);
-			for (int j = 0; j < 4; j++)
+			if (grid_list[grid.x][grid.y]->get_status() > TRANSITIONAL_FROM_DENSE || grid.neighbors < OUTSIDE_GRID_BOUNDARY)
 			{
-				tie(x, y) = neighbors[j];
-				if (x >= 0 && x < DIMENSIONS && y >= 0 && y < DIMENSIONS)
+				GetNeighbors(grid, neighbors);
+				for (int j = 0; j < 4; j++)
 				{
-					label = grid_list[x][y]->get_label();
-					if (label != it->first)
+					tie(x, y) = neighbors[j];
+					if (x >= 0 && x < DIMENSIONS && y >= 0 && y < DIMENSIONS)
 					{
-						if (label != NO_CLASS)
+						label = grid_list[x][y]->get_label();
+						if (label != it->first)
 						{
-							if (it->second.get_size() >= clusters[label].get_size())
+							if (label != NO_CLASS)
 							{
-								for (int k = 0; k > clusters[label].get_size(); k++)
+								if (it->second.get_size() >= clusters[label].get_size())
 								{
-									clusters[label].GetPair(k, x_t, y_t);
-									grid_list[x_t][y_t]->set_label(it->first);
+									for (int k = 0; k > clusters[label].get_size(); k++)
+									{
+										clusters[label].GetPair(k, x_t, y_t);
+										grid_list[x_t][y_t]->set_label(it->first);
+									}
+									it->second.MergeClusters(&clusters[label]);
 								}
-								it->second.MergeClusters(&clusters[label]);
-							}
-							else {
-								for (int k = 0; k < it->second.get_size(); k++)
-								{
-									it->second.GetPair(k, x_t, y_t);
-									grid_list[x_t][y_t]->set_label(label);
+								else {
+									for (int k = 0; k < it->second.get_size(); k++)
+									{
+										it->second.GetPair(k, x_t, y_t);
+										grid_list[x_t][y_t]->set_label(label);
+									}
+									clusters[label].MergeClusters(&it->second);
 								}
-								clusters[label].MergeClusters(&it->second);
 							}
-						}
-						else if (grid_list[x][y]->get_density() >= d_l)
-						{
-							grid_list[x][y]->set_label(it->first);
-							it->second.AddElement(make_tuple(x, y));
+							else if (grid_list[x][y]->get_density() >= d_l)
+							{
+								grid_list[x][y]->set_label(it->first);
+								it->second.AddElement(GridTuple(x, y, grid_list[x][y]->get_density(), 1));
+								it->second.increase_neighbors(i);
+							}
 						}
 					}
 				}
@@ -185,14 +203,28 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 }
 
 
-void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now)
+void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
 {
+	float density;
 	for (int i = 0; i < DIMENSIONS; i++)
 		for (int j = 0; j < DIMENSIONS; j++)
 		{
 			if (grid_list[i][j] != nullptr)
 			{
 				grid_list[i][j]->UpdateDensity(time_now);
+				density = grid_list[i][j]->get_density();
+				if (density >= d_m) 
+				{
+					grid_list[i][j]->SetStatus(DENSE);
+				}
+				else if (density >= d_l)
+				{
+					grid_list[i][j]->SetStatus(TRANSITIONAL);
+				}
+				else if (grid_list[i][j]->get_status() != SPORADIC)
+				{
+					grid_list[i][j]->SetStatus(SPARSE);
+				}
 			}
 		}
 }
@@ -206,27 +238,93 @@ void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m
 			if (grid_list[i][j] != nullptr && grid_list[i][j]->get_density() >= d_m)
 			{
 				grid_list[i][j]->set_label(n);
-				clusters[n].AddElement(make_tuple(i, j));
+				clusters[n].AddElement(GridTuple(i, j, grid_list[i][j]->get_density(), 0));
 				n++;
 			}
 		}
 }
 
-void GetNeighbors(tuple<int, int> & pair, tuple<int, int> neighbors[4]) {
-	neighbors[0] = make_tuple(get<0>(pair) - 1, get<1>(pair));
-	neighbors[1] = make_tuple(get<0>(pair) + 1, get<1>(pair));
-	neighbors[2] = make_tuple(get<0>(pair), get<1>(pair) - 1);
-	neighbors[3] = make_tuple(get<0>(pair), get<1>(pair) + 1);
+void GetNeighbors(GridTuple & pair, tuple<int, int> neighbors[4]) {
+	neighbors[0] = make_tuple(pair.x - 1, pair.y);
+	neighbors[1] = make_tuple(pair.x + 1, pair.y);
+	neighbors[2] = make_tuple(pair.x, pair.y - 1);
+	neighbors[3] = make_tuple(pair.x, pair.y + 1);
 }
 
 void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now)
 {
+	unsigned __int64 time_updated;
+	float density;
+	CharacteristicVector * grid;
+	for (int i = 0; i < DIMENSIONS; i++)
+	{
+		for (int j = 0; j < DIMENSIONS; j++)
+		{
+			if (grid_list[i][j] != nullptr)
+			{
+				grid = grid_list[i][j];
+				if (grid->get_status() == SPORADIC)
+				{
+					if (!grid->is_changed())
+					{
+						delete grid_list[i][j];
+						grid_list[i][j] = nullptr;
+					}
+					else
+					{
+						time_updated = grid->get_time_updated();
+						grid->UpdateDensity(time_now);
+						density = grid->get_density();
+						if (!IsSporadic(density, time_updated, time_now))
+						{
+							grid->SetStatus(SPARSE);
+						}
+					}
+				}
+				else if (grid->get_status() == SPARSE)
+				{
+					time_updated = grid->get_time_updated();
+					grid->UpdateDensity(time_now);
+					density = grid->get_density();
+					if (IsSporadic(density, time_updated, time_now))
+					{
+						grid->SetStatus(SPORADIC);
+					}
+				}
 
+			}
+		}
+	}
 }
 
-void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now)
+void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
 {
+	CharacteristicVector * grid;
+	unsigned __int8 grid_status;
 
+	RemoveSporadic(grid_list, time_now);
+	UpdateDensities(grid_list, time_now, d_m, d_l);
+	for (int i = 0; i < DIMENSIONS; i++)
+	{
+		for (int j = 0; j < DIMENSIONS; j++)
+		{
+			grid = grid_list[i][j];
+			if (grid != nullptr && grid->is_changed())
+			{
+				grid_status = grid->get_status();
+				if (grid_status == SPARSE)
+				{
+				}
+				else if (grid_status == DENSE)
+				{
+
+				}
+				else if (grid_status == TRANSITIONAL)
+				{
+				}
+			}
+		}
+	}
 }
 
 float EstimatedDensitiesSum(unsigned __int64 time_now)
@@ -235,7 +333,7 @@ float EstimatedDensitiesSum(unsigned __int64 time_now)
 	return estimated_sum;
 }
 
-void CalculateDensityThresholds(float & d_m, float & d_l)
+void CalculateDensityParams(float & d_m, float & d_l)
 {
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	d_m = C_M / denumerator;
@@ -284,7 +382,7 @@ void PrintTable(Gridlist & grid_list, unsigned __int64 time_now)
 	cout << "Time now: " << time_now << " (+1)." << endl;
 	cout << "Cycles: " << NO_OF_CYCLES << endl;
 	cout << "Sum: " << sum << endl;
-	cout << "Estimated sum: " << EstimatedDensitiesSum(time_now);
+	cout << "Estimated sum: " << EstimatedDensitiesSum(time_now) << endl;
 }
 
 void PrintClusters(Clusters & clusters)

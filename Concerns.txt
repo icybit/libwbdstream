@@ -1,0 +1,2 @@
+1. During the clustering characteristic vectors of grids get changed (labels change) - we have to sinchronize it back to the tree!
+2. Grid Cluster formation (couple different cases)

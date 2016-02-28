@@ -6,18 +6,31 @@
 
 using namespace std;
 
+struct GridTuple
+{
+	int x;
+	int y;
+	float density;
+	unsigned __int8 neighbors;
+
+	GridTuple() {}
+
+	GridTuple(int x, int y, float density, unsigned __int8 neighbors)
+		: x(x), y(y), density(density), neighbors(neighbors) {}
+};
+
 class Cluster
 {
 public:
 	Cluster() {}
-	Cluster(unsigned int label);
 
+	Cluster(unsigned int label);
 	
-	void AddElement(tuple<int, int> grid) {
+	void AddElement(GridTuple grid) {
 		grids_.push_back(grid);
 	}
 
-	tuple<int, int> GetElement(int index) {
+	GridTuple GetElement(int index) {
 		return grids_[index];
 	}
 
@@ -25,9 +38,11 @@ public:
 
 	void MergeClusters(Cluster * cluster);
 
-	tuple<int, int> PopBack();
+	GridTuple PopBack();
 
 	void RemoveElement(int index);
+
+	void RemoveElement(int x, int y);
 
 	// Getters
 
@@ -35,14 +50,25 @@ public:
 
 	unsigned int get_label() { return this->label_; }
 
+	unsigned __int8 get_neighbors_count(int index) {
+		return grids_[index].neighbors;
+	}
+
 	// Setters
+	void increase_neighbors(int index) {
+		grids_[index].neighbors++;
+	}
+
+	void decrease_neighbors(int index) {
+		grids_[index].neighbors--;
+	}
 
 	void set_label(unsigned int label) {
 		this->label_ = label;
 	}
 private:
 	unsigned int label_;
-	vector<tuple<int, int>> grids_;
+	vector<GridTuple> grids_;
 };
 
 #endif // !STM_D_STREAM_CLUSTER_H_
