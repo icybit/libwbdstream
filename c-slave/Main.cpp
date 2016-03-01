@@ -63,12 +63,10 @@ int main() {
 	CharacteristicVector * vect;
 	Key key;
 
-	/*
+	// Start time
 	auto start0 = std::chrono::high_resolution_clock::now();
-	auto end0 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> diff0 = end0 - start0;
-	std::cout << "Time to fill and iterate a vector of " << size << " ints : " << diff0.count() << " s\n";
-	*/
+	//	
+
 	CalculateDensityParams(d_m, d_l);
 	// fake d_m - just for testing;
 	d_m = 5;
@@ -90,17 +88,34 @@ int main() {
 		}
 		if (time_now == gap)
 		{
-			InitialClustering(grid_list, clusters, time_now, d_m, d_l);
+			//InitialClustering(grid_list, clusters, time_now, d_m, d_l);
 		}
 		else if(time_now % gap == 0 && time_now != 0)
 		{
-			AdjustClustering(grid_list, time_now, d_m, d_l);
+			//AdjustClustering(grid_list, time_now, d_m, d_l);
 		}
 		time_now++;
 	}
 	time_now--;
+
+	// Duration of inserts
+	auto end0 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> diff0 = end0 - start0;
+	std::cout << "Time for " << NO_OF_CYCLES << " inserts: " << diff0.count() << " s\n";
+	//
+
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	InitialClustering(grid_list, clusters, time_now, d_m, d_l);
+
+	// Duration of initial clustering and total time
+	auto end1 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> diff1 = end1 - start0;
+	std::chrono::duration<double> diff2 = end1 - end0;
+	std::cout << "Time to cluster after " << NO_OF_CYCLES << " inserts in " << DIMENSIONS << "x" << DIMENSIONS
+		<< " area: " << diff2.count() << " s\n";
+	std::cout << "Total time: " << diff1.count() << " s\n";
+	//
+
 	PrintClusters(clusters);
 	PrintTable(grid_list, time_now);
 	std::cout << "Press enter to exit." << endl;
@@ -165,7 +180,7 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	CreateDistinctClusters(grid_list, clusters, d_m);
 	//
-	PrintClusters(clusters);
+	//PrintClusters(clusters);
 	//
 	// Iterate through all clusters
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
@@ -323,11 +338,6 @@ void GetNeighbors(float x, float y, tuple<float, float> neighbors[4]) {
 	neighbors[3] = make_tuple(x, y + STEP);
 }
 
-void IncreaseNeighborsScore(unsigned int label, unsigned __int8 status)
-{
-
-}
-
 void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now)
 {
 	unsigned __int64 time_updated;
@@ -408,6 +418,7 @@ float EstimatedDensitiesSum(unsigned __int64 time_now)
 	return estimated_sum;
 }
 
+// Calculate Dm and Dl;
 void CalculateDensityParams(float & d_m, float & d_l)
 {
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
