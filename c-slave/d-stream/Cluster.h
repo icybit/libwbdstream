@@ -4,19 +4,16 @@
 #include <tuple>
 #include <vector>
 
-using namespace std;
-
 struct GridTuple
 {
 	int x;
 	int y;
 	float density;
-	unsigned __int8 neighbors;
 
 	GridTuple() {}
 
-	GridTuple(int x, int y, float density, unsigned __int8 neighbors)
-		: x(x), y(y), density(density), neighbors(neighbors) {}
+	GridTuple(int x, int y, float density)
+		: x(x), y(y), density(density) {}
 };
 
 class Cluster
@@ -29,7 +26,7 @@ public:
 	void AddElement(GridTuple grid) {
 		grids_.push_back(grid);
 	}
-
+	
 	GridTuple GetElement(int index) {
 		return grids_[index];
 	}
@@ -50,25 +47,12 @@ public:
 
 	unsigned int get_label() { return this->label_; }
 
-	unsigned __int8 get_neighbors_count(int index) {
-		return grids_[index].neighbors;
-	}
-
-	// Setters
-	void increase_neighbors(int index) {
-		grids_[index].neighbors++;
-	}
-
-	void decrease_neighbors(int index) {
-		grids_[index].neighbors--;
-	}
-
 	void set_label(unsigned int label) {
 		this->label_ = label;
 	}
 private:
 	unsigned int label_;
-	vector<GridTuple> grids_;
+	std::vector<GridTuple> grids_;
 };
 
 #endif // !STM_D_STREAM_CLUSTER_H_

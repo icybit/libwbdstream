@@ -10,16 +10,22 @@ CharacteristicVector::CharacteristicVector()
 	this->status_ = INITIAL;
 	this->density_ = 0.0f;
 	this->changed_ = true;
+	this->neighbors_ = 0;
 }
 
-CharacteristicVector::CharacteristicVector(unsigned __int64 time_updated, float density, unsigned int label,
-	unsigned __int8 status, bool changed)
+CharacteristicVector::CharacteristicVector(unsigned __int64 time_updated)
 {
 	this->time_updated_ = time_updated;
-	this->status_ = status;
-	this->label_ = label;
-	this->density_ = density;
-	this->changed_ = changed;
+	this->label_ = NO_CLASS;
+	this->status_ = INITIAL;
+	this->density_ = 1.0f; // Since it's created by hit, add one
+	this->changed_ = true;
+	this->neighbors_ = 0;
+}
+
+void CharacteristicVector::AddNeighbors(unsigned __int8 count)
+{
+	this->neighbors_ += count;
 }
 
 void CharacteristicVector::AddRecord(unsigned __int64 time_now)
@@ -75,7 +81,7 @@ void CharacteristicVector::SetStatus(unsigned __int8 status)
 
 void CharacteristicVector::UpdateDensity(unsigned __int64 time_now)
 {
-	this->density_ = (float)pow(DECAY_FACTOR, (double)(time_now - this->time_updated_)) * density_; // (5) - research paper
+	this->density_ = (float)pow(DECAY_FACTOR, (double)(time_now - this->time_updated_)) * this->density_; // (5) - research paper
 	this->time_updated_ = time_now;
 }
 
