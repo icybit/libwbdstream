@@ -46,7 +46,8 @@ void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m
 void RemoveEmptyClusters(Clusters & clusters);
 unsigned int LabelHash(Key & key);
 void GetNeighbors(float x, float y, tuple<float, float> neighbors[4]);
-void IncreaseNeighborsScore(unsigned int label, unsigned __int8 status);
+unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<float, float> (&neighbors_join)[4], unsigned int label);
+void MergeClusters(Cluster & main_cluster, Cluster & secondary_cluster, Gridlist & grid_list);
 
 void GenerateRandomPair(int & x, int & y, int counter);
 void PrintTable(Gridlist & grid_list, unsigned __int64 time_now);
@@ -168,19 +169,19 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 	int x_t, y_t; // coordinates of grid to transfer;
 	unsigned int label;
 	GridTuple grid;
-	tuple<float, float> neighbors[4];
-	tuple<float, float> neighbors_join[4];
+	tuple<float, float> neighbors[4];	
 	CharacteristicVector * vect;
 	Key key;
-
-	Key key_neighbor;
+	
+	tuple<float, float> neighbors_join[4];
 	CharacteristicVector * vect_neighbor;
+	Key key_neighbor;
 	int neighbor_score;
 	
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	CreateDistinctClusters(grid_list, clusters, d_m);
 	//
-	//PrintClusters(clusters);
+	PrintClusters(clusters);
 	//
 	// Iterate through all clusters
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
@@ -206,48 +207,17 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 							{
 								if (it->second->get_size() >= clusters[label]->get_size())
 								{
-									for (int k = 0; k > clusters[label]->get_size(); k++)
-									{
-										clusters[label]->GetPair(k, x_t, y_t);
-										grid_list[Key(x_t, y_t)]->set_label(it->first);
-									}
-									it->second->MergeClusters(clusters[label]);
+									MergeClusters(*it->second, *clusters[label], grid_list);								
 								}
 								else {
-									for (int k = 0; k < it->second->get_size(); k++)
-									{
-										it->second->GetPair(k, x_t, y_t);
-										grid_list[Key(x_t, y_t)]->set_label(label);
-									}
-									clusters[label]->MergeClusters(it->second);
+									MergeClusters(*clusters[label], *it->second, grid_list);
 								}
 							}
 							// Only TRANSITIONAL grids can be labelled as NO_CLASS at this stage
 							else if (grid_list[key]->get_density() >= d_l)
 							{
 								GetNeighbors(x, y, neighbors_join);
-								neighbor_score = 0;
-								for (int i = 0; i < 4; i++)
-								{
-									key_neighbor = Key(get<0>(neighbors_join[i]), get<1>(neighbors_join[i]));
-									vect_neighbor = grid_list[key_neighbor];
-									if (vect_neighbor && vect_neighbor->get_label() == it->first)
-									{
-										if (vect_neighbor->get_status() > TRANSITIONAL_FROM_DENSE)
-										{
-											neighbor_score += VALUE_DENSE;
-										}
-										else if(vect_neighbor->get_neighbors() <= VALUE_CAN_ADD)
-										{
-											neighbor_score += VALUE_TRANSITIONAL;
-										}
-										else
-										{
-											neighbor_score += OUTSIDE_GRID_BOUNDARY;
-											break;
-										}
-									}
-								}
+								neighbor_score = GetNeighborsScore(x, y, grid_list, neighbors_join, it->first);
 								if (neighbor_score <= OUTSIDE_GRID_BOUNDARY)
 								{
 									grid_list[key]->set_label(it->first);
@@ -321,6 +291,7 @@ void RemoveEmptyClusters(Clusters & clusters)
 		}
 		else
 		{
+			delete it->second;
 			it = clusters.erase(it);
 		}
 	}
@@ -338,75 +309,142 @@ void GetNeighbors(float x, float y, tuple<float, float> neighbors[4]) {
 	neighbors[3] = make_tuple(x, y + STEP);
 }
 
+unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<float, float> (&neighbors_join)[4], unsigned int label)
+{
+	int neighbor_score = 0;
+	Key key_neighbor;
+	CharacteristicVector * vect_neighbor;
+
+	for (int i = 0; i < 4; i++)
+	{
+		key_neighbor = Key(get<0>(neighbors_join[i]), get<1>(neighbors_join[i]));
+		vect_neighbor = grid_list[key_neighbor];
+		if (vect_neighbor && vect_neighbor->get_label() == label)
+		{
+			if (vect_neighbor->get_status() > TRANSITIONAL_FROM_DENSE)
+			{
+				neighbor_score += VALUE_DENSE;
+			}
+			else if (vect_neighbor->get_neighbors() <= VALUE_CAN_ADD)
+			{
+				neighbor_score += VALUE_TRANSITIONAL;
+			}
+			else
+			{
+				neighbor_score += OUTSIDE_GRID_BOUNDARY;
+				break;
+			}
+		}
+	}
+	return neighbor_score;
+}
+
+void MergeClusters(Cluster & main_cluster, Cluster & secondary_cluster, Gridlist & grid_list)
+{
+	tuple<float, float> neighbors[4];
+	GridTuple grid;
+	CharacteristicVector * vect_neighbor;
+	CharacteristicVector * vect_itself;
+	vector<CharacteristicVector *> grids_to_move;
+	float x, y;
+	Key key_neighbor;
+	Key key_itself;
+	unsigned int label;
+
+	unsigned int score_neighbor;
+	unsigned int score_itself;
+
+	label = main_cluster.get_label();
+
+	for (int i = 0; i < secondary_cluster.get_size(); i++)
+	{
+		grid = secondary_cluster.GetElement(i);
+		key_itself = Key(grid.x, grid.y);
+		vect_itself = grid_list[key_itself];
+		grids_to_move.push_back(vect_itself);
+		GetNeighbors(grid.x, grid.y, neighbors);
+		for (int j = 0; j < 4; j++)
+		{
+			tie(x, y) = neighbors[j];
+			key_neighbor = Key(x, y);
+			vect_neighbor = grid_list[key_neighbor];
+			if (vect_neighbor && vect_neighbor->get_label() == label)
+			{
+				score_neighbor = (vect_neighbor->get_status() < DENSE_FROM_SPARSE) ? VALUE_TRANSITIONAL : VALUE_DENSE;
+				score_itself = (vect_itself->get_status() < DENSE_FROM_SPARSE) ? VALUE_TRANSITIONAL : VALUE_DENSE;
+				vect_neighbor->AddNeighbors(score_itself);
+				vect_itself->AddNeighbors(score_neighbor);
+			}
+		}
+	}
+	for (int i = 0; i < grids_to_move.size(); i++)
+	{
+		grids_to_move[i]->set_label(label);
+		main_cluster.AddElement(secondary_cluster.PopBack());
+	}
+}
+
 void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now)
 {
 	unsigned __int64 time_updated;
 	float density;
-	CharacteristicVector * grid;
-	for (int i = 0; i < DIMENSIONS; i++)
+
+	for (auto it = grid_list.begin(); it != grid_list.end(); it)
 	{
-		for (int j = 0; j < DIMENSIONS; j++)
+		if (it->second->get_status() == SPORADIC)
 		{
-			if (grid_list[Key(i, j)] != nullptr)
+			if (!it->second->is_changed())
 			{
-				grid = grid_list[Key(i, j)];
-				if (grid->get_status() == SPORADIC)
-				{
-					if (!grid->is_changed())
-					{
-						grid_list.erase(Key(i, j));
-					}
-					else
-					{
-						time_updated = grid->get_time_updated();
-						grid->UpdateDensity(time_now);
-						density = grid->get_density();
-						if (!IsSporadic(density, time_updated, time_now))
-						{
-							grid->SetStatus(SPARSE);
-						}
-					}
-				}
-				else if (grid->get_status() < TRANSITIONAL_FROM_SPARSE)
-				{
-					time_updated = grid->get_time_updated();
-					grid->UpdateDensity(time_now);
-					density = grid->get_density();
-					if (IsSporadic(density, time_updated, time_now))
-					{
-						grid->SetStatus(SPORADIC);
-					}
-				}
+				delete it->second;
+				it = grid_list.erase(it);
 			}
+			else
+			{
+				time_updated = it->second->get_time_updated();
+				it->second->UpdateDensity(time_now);
+				density = it->second->get_density();
+				if (!IsSporadic(density, time_updated, time_now))
+				{
+					it->second->SetStatus(SPARSE);
+				}
+				it++;
+			}
+		}
+		else if (it->second->get_status() < TRANSITIONAL_FROM_SPARSE)
+		{
+			time_updated = it->second->get_time_updated();
+			it->second->UpdateDensity(time_now);
+			density = it->second->get_density();
+			if (IsSporadic(density, time_updated, time_now))
+			{
+				it->second->SetStatus(SPORADIC);
+			}
+			it++;
 		}
 	}
 }
 
 void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
 {
-	CharacteristicVector * grid;
-	unsigned __int8 grid_status;
-
-	//RemoveSporadic(grid_list, time_now);
-	//UpdateDensities(grid_list, time_now, d_m, d_l);
-	for (int i = 0; i < DIMENSIONS; i++)
+	unsigned __int8 status;
+	RemoveSporadic(grid_list, time_now);
+	UpdateDensities(grid_list, time_now, d_m, d_l);
+	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
-		for (int j = 0; j < DIMENSIONS; j++)
+		if (it->second->is_changed())
 		{
-			grid = grid_list[Key(i, j)];
-			if (grid != nullptr && grid->is_changed())
+			status = it->second->get_status();
+			// SPARSE
+			if (status < TRANSITIONAL_FROM_SPARSE && status > SPORADIC)
 			{
-				grid_status = grid->get_status();
-				if (grid_status == SPARSE)
-				{
-				}
-				else if (grid_status == DENSE)
-				{
-
-				}
-				else if (grid_status == TRANSITIONAL)
-				{
-				}
+			}
+			// TRANSITIONAL
+			else if (status < DENSE_FROM_SPARSE)
+			{
+			}
+			// DENSE
+			else
+			{
 			}
 		}
 	}
