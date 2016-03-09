@@ -1,2 +1,9 @@
-1. During the clustering characteristic vectors of grids get changed (labels change) - we have to sinchronize it back to the tree!
-2. Grid Cluster formation (couple different cases)
+1. DONE During the clustering characteristic vectors of grids get changed (labels change) - we have to sinchronize it back to the tree!
+2. DONE Grid Cluster formation (couple different cases)
+3. For visualization: do we need to know each of the grids in cluster density 
+or is it enough to know whether the grid is DENSE or TRANSITIONAL? Or we don't care about none of those?
+4. Statuses are set/changed in c-slave. UpdateDensities in InitialClustering and AdjustClustering. Synchronization back to b-slave needed.
+To much communication? Can it be done in b-slave? No, because it will ruin chances to remove sporadic grids?
+5. NEED TO BE FIXED - AdjustClustering - TRANSITIONAL grid might not catch dense grids.
+6. DROP POINTERS?
+7. Rebuilding Clusters from characteristic vectors. TRY IT!

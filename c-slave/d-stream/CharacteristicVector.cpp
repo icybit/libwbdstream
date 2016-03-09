@@ -36,7 +36,7 @@ void CharacteristicVector::AddRecord(unsigned __int64 time_now)
 
 void CharacteristicVector::SetStatus(unsigned __int8 status)
 {
-	if (abs(this->status_ - status) > 1 && this->status_ != INITIAL) // It has changed - look for numbering in header file
+	if (abs(this->status_ - status) > 1) // It has changed - look for numbering in header file
 	{
 		this->set_changed();
 		if (status == TRANSITIONAL)
@@ -73,7 +73,7 @@ void CharacteristicVector::SetStatus(unsigned __int8 status)
 			}
 		}
 	}
-	else if (this->status_ == INITIAL)
+	else
 	{
 		this->status_ = status;
 	}

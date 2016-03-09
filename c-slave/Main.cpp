@@ -3,12 +3,16 @@
 #include "d-stream\Key.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <string>
 
+//#include "zmq.hpp"
 #include <tuple>
 #include <unordered_map>
+
 
 using namespace std;
 
@@ -33,7 +37,7 @@ typedef unordered_map<unsigned int, Cluster *> Clusters;
 
 void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l);
 void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int64 time_now, float d_m, float d_l);
-void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l);
+void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int64 time_now, float d_m, float d_l);
 void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now);
 float EstimatedDensitiesSum(unsigned __int64 time_now);
 int CalculateGapTime();
@@ -43,27 +47,45 @@ bool IsSporadic(float density, unsigned __int64 time_updated, unsigned __int64 t
 
 
 void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m);
+void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters);
 void RemoveEmptyClusters(Clusters & clusters);
 unsigned int LabelHash(Key & key);
 void GetNeighbors(float x, float y, tuple<float, float> neighbors[4]);
-unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<float, float> (&neighbors_join)[4], unsigned int label);
+unsigned __int8 GetNeighborsScore(Gridlist & grid_list, tuple<float, float>(&neighbors_join)[4], unsigned int label, bool transitional);
+void UpdateNeighborsScores(Gridlist & grid_list, tuple<float, float> neighbors[4], unsigned __int8 score, unsigned int label);
 void MergeClusters(Cluster & main_cluster, Cluster & secondary_cluster, Gridlist & grid_list);
+void ResetGridsStatusToUnchanged(Gridlist & grid_list);
 
-void GenerateRandomPair(int & x, int & y, int counter);
+void GenerateRandomPair(float & x, float & y, int counter);
 void PrintTable(Gridlist & grid_list, unsigned __int64 time_now);
 void PrintClusters(Clusters & clusters);
+void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list);
 
 int main() {
 
-	int x, y;
+	float x, y;
 	float d_m, d_l; // threshold for dense grid, threshold for sparse grid;
 	unsigned __int64 time_now = 0;
 	unsigned __int64 gap = 0;
 	Gridlist grid_list;
 	Clusters clusters;
-	CharacteristicVector * vect;
-	Key key;
-
+	Key key;/*
+	// ZeroMQ socket, publisher-subscriber pattern
+	float lat = 54.692396 - 0.1;
+	float lng = 25.208515 - 0.1;
+	float x_diff;
+	float y_diff;
+	zmq::context_t context(1);
+	zmq::socket_t publisher(context, ZMQ_PUB);
+	publisher.bind("tcp://*:5556");
+	while (1) {
+		x_diff = rand() % 10 / 100;
+		y_diff = rand() % 10 / 100;
+		zmq::message_t message(25);
+		sprintf((char *)message.data(), "{x:%f,y:%f}", lat + x_diff, lng + y_diff);
+		publisher.send(message);
+	}
+	*/
 	// Start time
 	auto start0 = std::chrono::high_resolution_clock::now();
 	//	
@@ -71,7 +93,7 @@ int main() {
 	CalculateDensityParams(d_m, d_l);
 	// fake d_m - just for testing;
 	d_m = 5;
-	gap = CalculateGapTime(); 
+	gap = CalculateGapTime();
 	// fake gap time - for testing;
 	gap = 505;
 
@@ -91,9 +113,9 @@ int main() {
 		{
 			//InitialClustering(grid_list, clusters, time_now, d_m, d_l);
 		}
-		else if(time_now % gap == 0 && time_now != 0)
+		else if (time_now % gap == 0 && time_now != 0)
 		{
-			//AdjustClustering(grid_list, time_now, d_m, d_l);
+			//AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 		}
 		time_now++;
 	}
@@ -102,23 +124,24 @@ int main() {
 	// Duration of inserts
 	auto end0 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff0 = end0 - start0;
-	std::cout << "Time for " << NO_OF_CYCLES << " inserts: " << diff0.count() << " s\n";
 	//
-
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	InitialClustering(grid_list, clusters, time_now, d_m, d_l);
-
+	//AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	// Duration of initial clustering and total time
 	auto end1 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff1 = end1 - start0;
 	std::chrono::duration<double> diff2 = end1 - end0;
+
+	std::cout << "Time for " << NO_OF_CYCLES << " inserts: " << diff0.count() << " s\n";
 	std::cout << "Time to cluster after " << NO_OF_CYCLES << " inserts in " << DIMENSIONS << "x" << DIMENSIONS
 		<< " area: " << diff2.count() << " s\n";
 	std::cout << "Total time: " << diff1.count() << " s\n";
 	//
 
 	PrintClusters(clusters);
-	PrintTable(grid_list, time_now);
+	//PrintGridsByClusters(clusters, grid_list);
+	//PrintTable(grid_list, time_now);
 	std::cout << "Press enter to exit." << endl;
 	cin.ignore();
 	return 0;
@@ -166,22 +189,21 @@ int CalculateGapTime() {
 void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int64 time_now, float d_m, float d_l)
 {
 	int x, y; // coordinates of analyzed neighbor;
-	int x_t, y_t; // coordinates of grid to transfer;
 	unsigned int label;
 	GridTuple grid;
-	tuple<float, float> neighbors[4];	
+	tuple<float, float> neighbors[4];
 	CharacteristicVector * vect;
 	Key key;
-	
+
 	tuple<float, float> neighbors_join[4];
 	CharacteristicVector * vect_neighbor;
 	Key key_neighbor;
 	int neighbor_score;
-	
+
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	CreateDistinctClusters(grid_list, clusters, d_m);
 	//
-	PrintClusters(clusters);
+	//PrintClusters(clusters);
 	//
 	// Iterate through all clusters
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
@@ -191,48 +213,43 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 		{
 			grid = it->second->GetElement(i);
 			vect = grid_list[Key(grid.x, grid.y)];
-			if (vect->get_status() > TRANSITIONAL_FROM_DENSE || vect->get_neighbors() <= VALUE_CAN_ADD)
+			if (vect->get_status() > TRANSITIONAL_FROM_DENSE || vect->get_neighbors() <= (OUTSIDE_GRID_BOUNDARY - VALUE_DENSE))
 			{
 				GetNeighbors(grid.x, grid.y, neighbors);
 				for (int j = 0; j < 4; j++)
 				{
 					tie(x, y) = neighbors[j];
 					key = Key(x, y);
-					if (grid_list[key])
+					vect_neighbor = grid_list[key];
+					if (vect_neighbor)
 					{
-						label = grid_list[key]->get_label();
+						label = vect_neighbor->get_label();
+						// If analyzed neighbor's and main grid's labels don't match
 						if (label != it->first)
 						{
 							if (label != NO_CLASS)
 							{
 								if (it->second->get_size() >= clusters[label]->get_size())
 								{
-									MergeClusters(*it->second, *clusters[label], grid_list);								
+									MergeClusters(*it->second, *clusters[label], grid_list);
 								}
 								else {
 									MergeClusters(*clusters[label], *it->second, grid_list);
 								}
 							}
 							// Only TRANSITIONAL grids can be labelled as NO_CLASS at this stage
-							else if (grid_list[key]->get_density() >= d_l)
+							else if (vect_neighbor->get_density() >= d_l && vect->get_neighbors() <= VALUE_CAN_ADD)
 							{
+								// Analyzed neighbor' neighbors. Checking if his neighbors can add it
 								GetNeighbors(x, y, neighbors_join);
-								neighbor_score = GetNeighborsScore(x, y, grid_list, neighbors_join, it->first);
+								neighbor_score = GetNeighborsScore(grid_list, neighbors_join, it->first, true);
 								if (neighbor_score <= OUTSIDE_GRID_BOUNDARY)
 								{
-									grid_list[key]->set_label(it->first);
-									grid_list[key]->AddNeighbors(neighbor_score);
-									it->second->AddElement(GridTuple(x, y, grid_list[key]->get_density()));
-									for (int i = 0; i < 4; i++)
-									{
-										key_neighbor = Key(get<0>(neighbors_join[i]), get<1>(neighbors_join[i]));
-										vect_neighbor = grid_list[key_neighbor];
-										if (vect_neighbor && vect_neighbor->get_label() == it->first)
-										{
-											vect_neighbor->AddNeighbors(VALUE_TRANSITIONAL);
-										}
-									}
-								}							
+									vect_neighbor->set_label(it->first);
+									vect_neighbor->AddNeighbors(neighbor_score);
+									it->second->AddElement(GridTuple(x, y, vect_neighbor->get_status()));
+									UpdateNeighborsScores(grid_list, neighbors_join, VALUE_TRANSITIONAL, it->first);
+								}
 							}
 						}
 					}
@@ -240,29 +257,30 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 			}
 		}
 	}
+	//PrintTable(grid_list, time_now);
+	//ResetGridsStatusToUnchanged(grid_list);
 	RemoveEmptyClusters(clusters);
 }
-
 
 void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
 {
 	float density;
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
-			it->second->UpdateDensity(time_now);
-			density = it->second->get_density();
-			if (density >= d_m)
-			{
-				it->second->SetStatus(DENSE);
-			}
-			else if (density >= d_l)
-			{
-				it->second->SetStatus(TRANSITIONAL);
-			}
-			else if (it->second->get_status() != SPORADIC)
-			{
-				it->second->SetStatus(SPARSE);
-			}
+		it->second->UpdateDensity(time_now);
+		density = it->second->get_density();
+		if (density >= d_m)
+		{
+			it->second->SetStatus(DENSE);
+		}
+		else if (density >= d_l)
+		{
+			it->second->SetStatus(TRANSITIONAL);
+		}
+		else if (it->second->get_status() != SPORADIC)
+		{
+			it->second->SetStatus(SPARSE);
+		}
 	}
 }
 
@@ -276,7 +294,7 @@ void CreateDistinctClusters(Gridlist & grid_list, Clusters & clusters, float d_m
 			unsigned int label = LabelHash(key);
 			it->second->set_label(label);
 			clusters[label] = new Cluster(label);
-			clusters[label]->AddElement(GridTuple(it->first.x_, it->first.y_, it->second->get_density()));
+			clusters[label]->AddElement(GridTuple(it->first.x_, it->first.y_, it->second->get_status()));
 		}
 	}
 }
@@ -309,15 +327,19 @@ void GetNeighbors(float x, float y, tuple<float, float> neighbors[4]) {
 	neighbors[3] = make_tuple(x, y + STEP);
 }
 
-unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<float, float> (&neighbors_join)[4], unsigned int label)
+unsigned __int8 GetNeighborsScore(Gridlist & grid_list, tuple<float, float>(&neighbors_join)[4], unsigned int label, bool transitional)
 {
-	int neighbor_score = 0;
+	unsigned __int8 neighbor_score = 0;
+	float x, y;
 	Key key_neighbor;
 	CharacteristicVector * vect_neighbor;
+	unsigned __int8 boundary_value;
+	boundary_value = (transitional) ? VALUE_CAN_ADD : (OUTSIDE_GRID_BOUNDARY - VALUE_DENSE);
 
 	for (int i = 0; i < 4; i++)
 	{
-		key_neighbor = Key(get<0>(neighbors_join[i]), get<1>(neighbors_join[i]));
+		tie(x, y) = neighbors_join[i];
+		key_neighbor = Key(x, y);
 		vect_neighbor = grid_list[key_neighbor];
 		if (vect_neighbor && vect_neighbor->get_label() == label)
 		{
@@ -325,7 +347,7 @@ unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<flo
 			{
 				neighbor_score += VALUE_DENSE;
 			}
-			else if (vect_neighbor->get_neighbors() <= VALUE_CAN_ADD)
+			else if (vect_neighbor->get_neighbors() <= boundary_value)
 			{
 				neighbor_score += VALUE_TRANSITIONAL;
 			}
@@ -337,6 +359,23 @@ unsigned int GetNeighborsScore(float x, float y, Gridlist & grid_list, tuple<flo
 		}
 	}
 	return neighbor_score;
+}
+
+void UpdateNeighborsScores(Gridlist & grid_list, tuple<float, float> neighbors[4], unsigned __int8 score, unsigned int label)
+{
+	float x, y;
+	Key key_neighbor;
+	CharacteristicVector * vect_neighbor;
+	for (int i = 0; i < 4; i++)
+	{
+		tie(x, y) = neighbors[i];
+		key_neighbor = Key(x, y);
+		vect_neighbor = grid_list[key_neighbor];
+		if (vect_neighbor && vect_neighbor->get_label() == label)
+		{
+			vect_neighbor->AddNeighbors(score);
+		}
+	}
 }
 
 void MergeClusters(Cluster & main_cluster, Cluster & secondary_cluster, Gridlist & grid_list)
@@ -424,9 +463,89 @@ void RemoveSporadic(Gridlist & grid_list, unsigned __int64 time_now)
 	}
 }
 
-void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
+void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
+{
+	CharacteristicVector * vect;
+	CharacteristicVector * vect_neighbor;
+	Key key;
+	Key key_neighbor;
+	vector<Key> grids;
+	tuple<float, float> neighbors[4];
+	tuple<float, float> neighbors_join[4];
+	unsigned int label;
+	unsigned int label_neighbor;
+	float x, y;
+	unsigned __int8 neighbor_score = 0;
+	unsigned __int8 score = 0;
+
+	grids.push_back(grid);
+	for (int i = 0; i < grids.size(); i++)
+	{
+		key = Key(grids[i].x_, grids[i].y_);
+		vect = grid_list[key];
+		if (vect->get_status() > TRANSITIONAL_FROM_DENSE || vect->get_neighbors() <= (OUTSIDE_GRID_BOUNDARY - VALUE_DENSE))
+		{
+			GetNeighbors(key.x_, key.y_, neighbors);
+			for (int j = 0; j < 4; j++)
+			{
+				tie(x, y) = neighbors[j];
+				key_neighbor = Key(x, y);
+				vect_neighbor = grid_list[key_neighbor];
+				if (vect_neighbor && vect_neighbor->get_status() > SPARSE_FROM_DENSE)
+				{
+					if (vect_neighbor->get_label() != vect->get_label())
+					{
+						// Another grid that belongs to other cluster - just merge
+						if (vect_neighbor->get_label() != NO_CLASS)
+						{
+							label = vect->get_label();
+							label_neighbor = vect_neighbor->get_label();
+							if (clusters[label_neighbor]->get_size() >= clusters[label]->get_size())
+							{
+								MergeClusters(*clusters[label_neighbor], *clusters[label], grid_list);
+								delete clusters[label];
+								clusters.erase(label);
+							}
+							else {
+								MergeClusters(*clusters[label], *clusters[label_neighbor], grid_list);
+								delete clusters[label_neighbor];
+								clusters.erase(label_neighbor);
+							}
+						}
+						// DENSE grid cannot be marked NO_CLASS, so Grid must be TRANSITIONAL
+						else
+						{
+							label = vect->get_label();
+							GetNeighbors(x, y, neighbors_join);
+							neighbor_score = GetNeighborsScore(grid_list, neighbors_join, label, true);
+							if (neighbor_score <= OUTSIDE_GRID_BOUNDARY)
+							{
+								vect_neighbor->set_label(label);
+								vect_neighbor->AddNeighbors(neighbor_score);
+								clusters[label]->AddElement(GridTuple(x, y, vect_neighbor->get_status()));
+								UpdateNeighborsScores(grid_list, neighbors_join, VALUE_TRANSITIONAL, label);
+								grids.push_back(key_neighbor);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int64 time_now, float d_m, float d_l)
 {
 	unsigned __int8 status;
+	tuple<float, float> neighbors[4];
+	GridTuple grid;
+	vector<CharacteristicVector *> vects_for_recluster; // Newly added, have to look for clusters around them
+	CharacteristicVector * vect;
+	Key key;
+	Key key_neighbor;
+	unsigned int label;
+	unsigned __int8 score;
+
 	RemoveSporadic(grid_list, time_now);
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
@@ -434,19 +553,75 @@ void AdjustClustering(Gridlist & grid_list, unsigned __int64 time_now, float d_m
 		if (it->second->is_changed())
 		{
 			status = it->second->get_status();
+			key = it->first;
+			vect = it->second;
 			// SPARSE
 			if (status < TRANSITIONAL_FROM_SPARSE && status > SPORADIC)
 			{
+				// IMPLEMENT! Have to check whether have to split cluster or not
+				if (vect->get_label() != NO_CLASS) {
+					if (vect->get_status() == SPARSE_FROM_DENSE)
+					{
+						score = -VALUE_DENSE;
+					}
+					else
+					{
+						score = -VALUE_TRANSITIONAL;
+					}
+					GetNeighbors(key.x_, key.y_, neighbors);
+					UpdateNeighborsScores(grid_list, neighbors, score, vect->get_label());
+					clusters[vect->get_label()]->RemoveElement(key.x_, key.y_);
+					vect->set_label(NO_CLASS);
+				}
 			}
 			// TRANSITIONAL
 			else if (status < DENSE_FROM_SPARSE)
 			{
+
 			}
 			// DENSE
 			else
 			{
+				GetNeighbors(key.x_, key.y_, neighbors);
+				// If it doesn't belong to cluster, create its distinct cluster
+				if (vect->get_label() == NO_CLASS)
+				{
+					label = LabelHash(key);
+					clusters[label] = new Cluster(label);
+					clusters[label]->AddElement(GridTuple(key.x_, key.y_, vect->get_status()));
+					vect->set_label(label);
+				}
+				// If it belongs to cluster, update neighbors neighboring scores
+				else
+				{
+					// DENSE_FROM_TRANSITIONAL
+					if (vect->get_status() == DENSE_FROM_TRANSITIONAL)
+					{
+						score = -VALUE_DIFF;
+					}
+					// DENSE_FROM_SPARSE - does it ever hit this branch?
+					// If it was sparse, it probably haven't been in cluster.
+					else
+					{
+						score = VALUE_DENSE;
+						cout << "AdjustClustering - DENSE_FROM_SPARSE branch: " << vect->get_label() << endl;
+					}
+					UpdateNeighborsScores(grid_list, neighbors, score, vect->get_label());
+				}
+				CallClusteringOnGrid(key, grid_list, clusters);
 			}
 		}
+	}
+}
+
+void ResetGridsStatusToUnchanged(Gridlist & grid_list)
+{
+	int i = 0;
+	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
+	{
+		i++;
+		cout << i << ". " << it->second->get_density() << endl;
+		it->second->set_changed();
 	}
 }
 
@@ -464,14 +639,14 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	d_l = C_L / denumerator;
 }
 
-void GenerateRandomPair(int & x, int & y, int counter)
+void GenerateRandomPair(float & x, float & y, int counter)
 {
 	if (counter % 25 == 0)
 	{
 		x = 4;
 		y = 4;
 	}
-	else if (counter % 40 == 0) 
+	else if (counter % 40 == 0)
 	{
 		x = 4;
 		y = 5;
@@ -484,21 +659,24 @@ void GenerateRandomPair(int & x, int & y, int counter)
 
 void PrintTable(Gridlist & grid_list, unsigned __int64 time_now)
 {
+	Key key;
 	std::cout << "------------------------------------------------------------------------" << endl;
 	std::cout << setprecision(3);
 	float sum = 0;
 	for (int i = 0; i < DIMENSIONS; i++)
 	{
-		for (int j = 0; j < DIMENSIONS; j++)
-			if (grid_list[Key(i, j)] != nullptr)
+		for (int j = 0; j < DIMENSIONS; j++) {
+			key = Key(i, j);
+			if (grid_list[key] != nullptr)
 			{
-				std::cout << "|" << setw(6) << grid_list[Key(i, j)]->get_density();
-				sum += grid_list[Key(i, j)]->get_density();
+				std::cout << "|" << setw(6) << grid_list[key]->get_density();
+				sum += grid_list[key]->get_density();
 			}
 			else
 			{
 				std::cout << "|" << setw(6) << 0;
 			}
+		}
 		std::cout << "|" << endl;
 		std::cout << "-----------------------------------------------------------------------" << endl;
 	}
@@ -517,9 +695,30 @@ void PrintClusters(Clusters & clusters)
 	{
 		std::cout << "Cluster #" << it->first << ":" << endl;
 		for (unsigned int i = 0; i < it->second->get_size(); i++)
-		{	
+		{
 			it->second->GetPair(i, x, y);
 			std::cout << "Grid:     " << x << " : " << y << endl;
 		}
+	}
+	cout << endl;
+}
+
+void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list)
+{
+	float x, y;
+	Key key;
+	unsigned int label;
+	for (auto it = clusters.begin(); it != clusters.end(); ++it)
+	{
+		cout << "Cluster with label " << it->first << endl;
+		for (auto it_vect = it->second->get_begin_iterator(); it_vect < it->second->get_end_iterator(); ++it_vect)
+		{
+			x = it_vect->x;
+			y = it_vect->y;
+			key = Key(x, y);
+			label = grid_list[key]->get_label();
+			cout << "    Grid (" << x << ":" << y << ") label is " << label << endl;
+		}
+		cout << endl;
 	}
 }

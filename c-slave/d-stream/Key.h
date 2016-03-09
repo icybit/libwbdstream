@@ -1,7 +1,7 @@
 #ifndef STM_D_STREAM_KEY_H_
 #define STM_D_STREAM_KEY_H_
 
-#include <functional>
+#include <functional>  
 
 struct Key
 {

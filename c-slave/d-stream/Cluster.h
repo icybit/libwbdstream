@@ -6,14 +6,20 @@
 
 struct GridTuple
 {
-	int x;
-	int y;
-	float density;
+	float x;
+	float y;
+	// Do we need to know concrete density or is it enough to know whether grid is dense or transitional
+	unsigned __int8 density_status;
 
 	GridTuple() {}
 
-	GridTuple(int x, int y, float density)
-		: x(x), y(y), density(density) {}
+	GridTuple(float x, float y, unsigned __int8 density_status)
+		: x(x), y(y), density_status(density_status) {}
+
+	bool operator==(const GridTuple & g)
+	{
+		return this->x == g.x && this->y == g.y;
+	}
 };
 
 class Cluster
@@ -42,6 +48,14 @@ public:
 	void RemoveElement(int x, int y);
 
 	// Getters
+
+	std::vector<GridTuple>::iterator get_begin_iterator() {
+		return grids_.begin();
+	}
+
+	std::vector<GridTuple>::iterator get_end_iterator() {
+		return grids_.end();
+	}
 
 	int get_size() { return grids_.size(); }
 

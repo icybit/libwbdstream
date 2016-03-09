@@ -57,14 +57,16 @@ public:
 		return time_updated_;
 	}
 	
+	//Returns density
 	float get_density() { return this->density_; }
 	
 	//Returns label of the grid (ID of the cluster)
 	unsigned int get_label() { return label_; }
 
+	//Returns neighboring points
 	unsigned __int8 get_neighbors() { return neighbors_; }
 
-	//Returns status, is grid sporadic 
+	//Returns status, SPORADIC, SPARSE, TRANSITIONAL etc; 
 	unsigned __int8 get_status() { return status_; }
 
 	//Returns, if status has changed
