@@ -9,9 +9,16 @@
 #include <iomanip>
 #include <string>
 
-//#include "zmq.hpp"
+#include <iostream>
+#include <sstream>
+
+#include "zmq.hpp"
 #include <tuple>
 #include <unordered_map>
+
+//
+#include <Windows.h>
+//
 
 
 using namespace std;
@@ -31,6 +38,12 @@ using namespace std;
 #define VALUE_TRANSITIONAL 3
 #define VALUE_DENSE 1
 #define VALUE_DIFF VALUE_TRANSITIONAL-VALUE_DENSE
+
+#define COORDS "coords"
+#define CLUSTERS "clusters"
+
+#define CENTER_X 25.290391
+#define CENTER_Y 54.686668
 
 typedef unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef unordered_map<unsigned int, Cluster *> Clusters;
@@ -61,6 +74,8 @@ void PrintTable(Gridlist & grid_list, unsigned __int64 time_now);
 void PrintClusters(Clusters & clusters);
 void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list);
 
+string CreateCoordsJsonString(float lat, float lng);
+
 int main() {
 
 	float x, y;
@@ -69,23 +84,31 @@ int main() {
 	unsigned __int64 gap = 0;
 	Gridlist grid_list;
 	Clusters clusters;
-	Key key;/*
+	Key key;
 	// ZeroMQ socket, publisher-subscriber pattern
-	float lat = 54.692396 - 0.1;
-	float lng = 25.208515 - 0.1;
+	float lat = CENTER_Y - 0.03;
+	float lng = CENTER_X - 0.1;
 	float x_diff;
 	float y_diff;
+	size_t str_length = 52;
+	string str;
+
 	zmq::context_t context(1);
 	zmq::socket_t publisher(context, ZMQ_PUB);
 	publisher.bind("tcp://*:5556");
-	while (1) {
-		x_diff = rand() % 10 / 100;
-		y_diff = rand() % 10 / 100;
-		zmq::message_t message(25);
-		sprintf((char *)message.data(), "{x:%f,y:%f}", lat + x_diff, lng + y_diff);
+	while (1)
+	{
+
+		x_diff = ((float)rand() / (float)RAND_MAX)/5; // 0 to 1 -- /5 - 0 to 0.2
+		y_diff = ((float)rand() / (float)RAND_MAX)/16; // 0 to 1 -- /16 - 0 to 0.06
+		str = CreateCoordsJsonString(lat + y_diff, lng + x_diff);
+		str_length = str.length();
+		zmq::message_t message(str_length);
+		memcpy(message.data(), str.c_str(), str_length);
 		publisher.send(message);
+		Sleep(50);
 	}
-	*/
+
 	// Start time
 	auto start0 = std::chrono::high_resolution_clock::now();
 	//	
@@ -96,7 +119,7 @@ int main() {
 	gap = CalculateGapTime();
 	// fake gap time - for testing;
 	gap = 505;
-
+	srand(0);
 	for (int i = 0; i < NO_OF_CYCLES; i++)
 	{
 		GenerateRandomPair(x, y, i);
@@ -140,8 +163,8 @@ int main() {
 	//
 
 	PrintClusters(clusters);
-	//PrintGridsByClusters(clusters, grid_list);
-	//PrintTable(grid_list, time_now);
+	PrintGridsByClusters(clusters, grid_list);
+	PrintTable(grid_list, time_now);
 	std::cout << "Press enter to exit." << endl;
 	cin.ignore();
 	return 0;
@@ -257,7 +280,7 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 			}
 		}
 	}
-	//PrintTable(grid_list, time_now);
+	PrintTable(grid_list, time_now);
 	//ResetGridsStatusToUnchanged(grid_list);
 	RemoveEmptyClusters(clusters);
 }
@@ -619,9 +642,11 @@ void ResetGridsStatusToUnchanged(Gridlist & grid_list)
 	int i = 0;
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
-		i++;
-		cout << i << ". " << it->second->get_density() << endl;
-		it->second->set_changed();
+		if (it->second) {
+			i++;
+			cout << i << ". " << it->second->get_density() << endl;
+			it->second->set_changed();
+		}
 	}
 }
 
@@ -721,4 +746,14 @@ void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list)
 		}
 		cout << endl;
 	}
+}
+
+string CreateCoordsJsonString(float lat, float lng)
+{
+	std::stringstream ss;
+	string str;
+	ss << std::fixed << setprecision(6);
+	ss << "{\"channel\":\"" << COORDS << "\",\"lat\":" << lat << ",\"lng\":" << lng << "}";
+	str = ss.str();
+	return str;
 }
