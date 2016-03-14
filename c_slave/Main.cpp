@@ -25,9 +25,9 @@
 
 using namespace std;
 
-#define DIMENSIONS 10
+#define DIMENSIONS 15
 #define TOTAL_GRIDS DIMENSIONS*DIMENSIONS
-#define NO_OF_CYCLES 500
+#define NO_OF_CYCLES 7500
 
 #define STEP 1
 
@@ -90,6 +90,9 @@ string CreateClustersJsonString(Clusters & clusters, float lat, float lng);
 string ClusterToPath(float lat, float lng);
 void PrintPath(vector<Key> & path);
 
+void PushCoords(float x, float y, zmq::socket_t & publisher, float lat, float lng);
+void PushClusters(Clusters & clusters, zmq::socket_t & publisher);
+
 int main() {
 
 	float x, y;
@@ -110,19 +113,7 @@ int main() {
 	zmq::context_t context(1);
 	zmq::socket_t publisher(context, ZMQ_PUB);
 	publisher.bind("tcp://*:5556");
-	for (int i = 0; i < 100; i++)
-		//while (1)
-	{
 
-		x_diff = ((float)rand() / (float)RAND_MAX) / 5; // 0 to 1 -- /5 - 0 to 0.2
-		y_diff = ((float)rand() / (float)RAND_MAX) / 16; // 0 to 1 -- /16 - 0 to 0.06
-		str = CreateCoordsJsonString(lat + y_diff, lng + x_diff);
-		str_length = str.length();
-		zmq::message_t message(str_length);
-		memcpy(message.data(), str.c_str(), str_length);
-		publisher.send(message);
-		//Sleep(50);
-	}
 	/*	auto start5 = std::chrono::high_resolution_clock::now();
 		str = ClusterToPath(CENTER_Y, CENTER_X);
 		auto end5 = std::chrono::high_resolution_clock::now();
@@ -151,6 +142,10 @@ int main() {
 	{
 		GenerateRandomPair(x, y, i);
 		key = Key(x, y);
+		
+		PushCoords(x, y, publisher, CENTER_Y, CENTER_X);
+		Sleep(5);
+
 		if (!grid_list.count(key))
 		{
 			grid_list[key] = new CharacteristicVector(time_now);
@@ -163,16 +158,20 @@ int main() {
 		{
 			InitialClustering(grid_list, clusters, time_now, d_m, d_l);
 			PrintClusters(clusters);
-			PrintGridsByClusters(clusters, grid_list);
 			PrintTable(grid_list, time_now);
+
+			PushClusters(clusters, publisher);
+			Sleep(5);
 
 		}
 		else if (time_now % gap == 0 && time_now != 0)
 		{
 			AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 			PrintClusters(clusters);
-			PrintGridsByClusters(clusters, grid_list);
 			PrintTable(grid_list, time_now);
+
+			PushClusters(clusters, publisher);
+			Sleep(5);
 		}
 		time_now++;
 	}
@@ -182,24 +181,10 @@ int main() {
 	auto end0 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff0 = end0 - start0;
 	//
-	
-
-	UpdateDensities(grid_list, time_now, d_m, d_l);
-
-	InitialClustering(grid_list, clusters, time_now, d_m, d_l);
-
-	PrintClusters(clusters);
-
 	//
-	str = CreateClustersJsonString(clusters, CENTER_Y, CENTER_X);
-	str_length = str.length();
-	zmq::message_t message(str_length);
-	memcpy(message.data(), str.c_str(), str_length);
-	publisher.send(message);
+	
 	//Sleep(2500);
 	//
-
-	//AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	// Duration of initial clustering and total time
 	auto end1 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff1 = end1 - start0;
@@ -211,9 +196,6 @@ int main() {
 	std::cout << "Total time: " << diff1.count() << " s\n";
 	//
 
-	PrintClusters(clusters);
-	PrintGridsByClusters(clusters, grid_list);
-	PrintTable(grid_list, time_now);
 	std::cout << "Press enter to exit." << endl;
 	cin.ignore();
 	return 0;
@@ -275,9 +257,7 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 
 	CreateDistinctClusters(grid_list, clusters, d_m);
-	//
-	//PrintClusters(clusters);
-	//
+
 	// Iterate through all clusters
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
@@ -796,7 +776,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 						{
 							vect_neighbor = grid_list[key_neighbor];
 							label = vect_neighbor->get_label();
-							if (vect_neighbor->get_label() != NO_CLASS)
+							if (vect_neighbor->get_label() != NO_CLASS && vect_neighbor->get_label() != vect->get_label())
 							{
 								if (vect_neighbor->get_status() > TRANSITIONAL_FROM_DENSE || vect_neighbor->get_neighbors() <= VALUE_CAN_ADD)
 								{
@@ -831,6 +811,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 					clusters[label] = new Cluster(label);
 					clusters[label]->AddElement(GridTuple(key.x_, key.y_, vect->get_status()));
 					vect->set_label(label);
+					CallClusteringOnGrid(key, grid_list, clusters);
 				}
 				// If it belongs to cluster, update neighbors neighboring scores
 				else
@@ -839,13 +820,28 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 					if (vect->get_status() == DENSE_FROM_TRANSITIONAL)
 					{
 						score = -VALUE_DIFF;
-					}
+						UpdateNeighborsScores(grid_list, neighbors, score, vect->get_label());
+						for (int i = 0; i < 4; i++)
+						{
+							if (grid_list.count(neighbors[i]))
+							{
+								vect_neighbor = grid_list[neighbors[i]];
+								if (vect_neighbor->get_status() < DENSE_FROM_SPARSE
+									&& vect->get_label() == vect_neighbor->get_label()
+									&& vect_neighbor->get_neighbors() < VALUE_CAN_ADD)
+								{
+									CallClusteringOnGrid(neighbors[i], grid_list, clusters);
+								}
+							}
+						}
+				}	
 					// DENSE_FROM_SPARSE - does it ever hit this branch?
 					// If it was sparse, it probably haven't been in cluster.
 					else
 					{
 						score = VALUE_DENSE;
 						std::cout << "AdjustClustering - DENSE_FROM_SPARSE branch: " << vect->get_label() << endl;
+						CallClusteringOnGrid(key, grid_list, clusters);
 					}
 					UpdateNeighborsScores(grid_list, neighbors, score, vect->get_label());
 				}
@@ -859,7 +855,7 @@ void ResetGridsStatusToUnchanged(Gridlist & grid_list)
 {
 	int i = 0;
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
-		it->second->set_changed();
+		it->second->set_unchanged();
 }
 
 float EstimatedDensitiesSum(unsigned __int64 time_now)
@@ -968,6 +964,7 @@ string CreateCoordsJsonString(float lat, float lng)
 	ss << std::fixed << setprecision(6);
 
 	ss << "{\"channel\":\"" << COORDS << "\",\"lat\":" << lat << ",\"lng\":" << lng << "}";
+
 	str = ss.str();
 
 	return str;
@@ -1286,4 +1283,30 @@ void PrintPath(vector<Key> & path)
 		std::cout << " |" << endl;
 	}
 	std::cout << "--------------------------------------------------------" << endl;
+}
+
+void PushCoords(float x, float y, zmq::socket_t & publisher, float lat, float lng)
+{
+	size_t str_length;
+	string str;
+	float x_diff, y_diff;
+	x_diff = x / 1000; // 0 to 1 -- /5 - 0 to 0.2
+	y_diff = y / 1000 * 0.6; // 0 to 1 -- /16 - 0 to 0.06
+	str = CreateCoordsJsonString(lat + y_diff, lng + x_diff);
+	str_length = str.length();
+	zmq::message_t message(str_length);
+	memcpy(message.data(), str.c_str(), str_length);
+	publisher.send(message);
+}
+
+void PushClusters(Clusters & clusters, zmq::socket_t & publisher)
+{	
+	string str;
+	size_t str_length;
+
+	str = CreateClustersJsonString(clusters, CENTER_Y, CENTER_X);
+	str_length = str.length();
+	zmq::message_t message(str_length);
+	memcpy(message.data(), str.c_str(), str_length);
+	publisher.send(message);
 }
