@@ -25,7 +25,7 @@
 
 using namespace std;
 
-#define DIMENSIONS 15
+#define DIMENSIONS 20
 #define TOTAL_GRIDS DIMENSIONS*DIMENSIONS
 #define NO_OF_CYCLES 7500
 
@@ -80,7 +80,7 @@ void RelabelNeighbors(Key key, Gridlist & grid_list, unsigned int old_label, uns
 void CheckIfConnected(Clusters & clusters, Gridlist & grid_list, unsigned int label);
 void ResetGridsStatusToUnchanged(Gridlist & grid_list);
 
-void GenerateRandomPair(float & x, float & y, int counter);
+void GenerateRandomPair(float & x, float & y, int counter, vector<Key> & points);
 void PrintTable(Gridlist & grid_list, unsigned __int64 time_now);
 void PrintClusters(Clusters & clusters);
 void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list);
@@ -94,7 +94,6 @@ void PushCoords(float x, float y, zmq::socket_t & publisher, float lat, float ln
 void PushClusters(Clusters & clusters, zmq::socket_t & publisher);
 
 int main() {
-
 	float x, y;
 	float d_m, d_l; // threshold for dense grid, threshold for sparse grid;
 	unsigned __int64 time_now = 0;
@@ -102,7 +101,6 @@ int main() {
 	Gridlist grid_list;
 	Clusters clusters;
 	Key key;
-	// ZeroMQ socket, publisher-subscriber pattern
 	float lat = CENTER_Y - 0.03f;
 	float lng = CENTER_X - 0.1f;
 	float x_diff;
@@ -131,16 +129,26 @@ int main() {
 
 	CalculateDensityParams(d_m, d_l);
 	// fake d_m - just for testing;
-	d_m = 5;
+	//d_m = 5;
 	gap = CalculateGapTime();
 	// fake gap time - for testing;
 	gap = 249;
 	srand(0);
 	key = Key(12, 12);
 	grid_list[key] = new CharacteristicVector(time_now);
+	
+	vector<Key> points;
+
+	points.push_back(Key(4, 4));
+	points.push_back(Key(12,2));
+	points.push_back(Key(17,15));
+	points.push_back(Key(4,9));
+	points.push_back(Key(10,10));
+	points.push_back(Key(8,9));
+
 	for (int i = 0; i < NO_OF_CYCLES; i++)
 	{
-		GenerateRandomPair(x, y, i);
+		GenerateRandomPair(x, y, i, points);
 		key = Key(x, y);
 		
 		PushCoords(x, y, publisher, CENTER_Y, CENTER_X);
@@ -167,6 +175,19 @@ int main() {
 		else if (time_now % gap == 0 && time_now != 0)
 		{
 			AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
+			for (int j = 0; j < points.size() - 1; j++)
+			{
+				int diff_x = rand() % 3 - 1;
+				int diff_y = rand() % 3 - 1;
+				if (points[j].x_ + diff_x >= 0 && points[j].x_ + diff_x < DIMENSIONS)
+				{
+					points[j].x_ += diff_x;
+				}
+				if (points[j].y_ + diff_y >= 0 && points[j].y_ + diff_y < DIMENSIONS)
+				{
+					points[j].y_ += diff_y;
+				}
+			}
 			PrintClusters(clusters);
 			PrintTable(grid_list, time_now);
 
@@ -872,24 +893,6 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	d_l = C_L / denumerator;
 }
 
-void GenerateRandomPair(float & x, float & y, int counter)
-{
-	if (counter % 25 == 0)
-	{
-		x = 4;
-		y = 4;
-	}
-	else if (counter % 40 == 0)
-	{
-		x = 4;
-		y = 5;
-	}
-	else {
-		x = rand() % DIMENSIONS;
-		y = rand() % DIMENSIONS;
-	}
-}
-
 void PrintTable(Gridlist & grid_list, unsigned __int64 time_now)
 {
 	Key key;
@@ -1309,4 +1312,30 @@ void PushClusters(Clusters & clusters, zmq::socket_t & publisher)
 	zmq::message_t message(str_length);
 	memcpy(message.data(), str.c_str(), str_length);
 	publisher.send(message);
+}
+
+void GenerateRandomPair(float & x, float & y, int counter, vector<Key> & points)
+{
+	int x_diff, y_diff;
+	int index = counter % (points.size() + 1);
+	if (index == points.size())
+	{
+		x = (float)(rand() % DIMENSIONS);
+		y = (float)(rand() % DIMENSIONS);
+	}
+	else
+	{
+		x_diff = rand() % 3 - 1;
+		switch (abs(x_diff)){
+		case 0:
+			y_diff = rand() % 3 - 1;
+			break;
+		case 1:
+			y_diff = 0;
+			break;
+		}
+		x = points[index].x_ + x_diff;
+		y = points[index].y_ + y_diff;
+	}
+
 }
