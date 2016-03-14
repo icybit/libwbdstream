@@ -4,6 +4,10 @@
 #include <tuple>
 #include <vector>
 
+#ifndef EPSILON
+#define EPSILON 0.00001f
+#endif EPSILON
+
 struct GridTuple
 {
 	float x;
@@ -18,7 +22,7 @@ struct GridTuple
 
 	bool operator==(const GridTuple & g)
 	{
-		return this->x == g.x && this->y == g.y;
+		return (abs(this->x - g.x) < EPSILON && abs(this->y - g.y) < EPSILON);
 	}
 };
 
@@ -37,7 +41,7 @@ public:
 		return grids_[index];
 	}
 
-	void GetPair(int index, int & x, int & y);
+	void GetPair(int index, float & x, float & y);
 
 	void MergeClusters(Cluster * cluster);
 
@@ -45,7 +49,7 @@ public:
 
 	void RemoveElement(int index);
 
-	void RemoveElement(int x, int y);
+	void RemoveElement(float x, float y);
 
 	// Getters
 
@@ -57,7 +61,7 @@ public:
 		return grids_.end();
 	}
 
-	int get_size() { return grids_.size(); }
+	int get_size() { return (int)grids_.size(); }
 
 	unsigned int get_label() { return this->label_; }
 

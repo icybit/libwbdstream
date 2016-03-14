@@ -6,7 +6,7 @@ Cluster::Cluster(unsigned int label)
 	this->label_ = label;
 }
 
-void Cluster::GetPair(int index, int & x, int & y)
+void Cluster::GetPair(int index, float & x, float & y)
 {
 	x = grids_[index].x;
 	y = grids_[index].y;
@@ -32,13 +32,13 @@ void Cluster::RemoveElement(int index)
 	grids_.erase(grids_.begin() + index);
 }
 
-void Cluster::RemoveElement(int x, int y)
+void Cluster::RemoveElement(float x, float y)
 {
 	int i;
 	bool found = false;
 	for (i = 0; i < grids_.size(); i++)
 	{
-		if (grids_[i].x == x && grids_[i].y == y)
+		if (abs(grids_[i].x - x) < EPSILON && abs(grids_[i].y - y) < EPSILON)
 		{
 			found = true;
 			break;

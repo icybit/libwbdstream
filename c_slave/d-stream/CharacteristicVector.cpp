@@ -72,6 +72,11 @@ void CharacteristicVector::SetStatus(unsigned __int8 status)
 				this->status_ = DENSE_FROM_TRANSITIONAL;
 			}
 		}
+		else if (status == SPORADIC)
+		{
+			this->set_unchanged();
+			this->status_ = status;
+		}
 	}
 	else
 	{
