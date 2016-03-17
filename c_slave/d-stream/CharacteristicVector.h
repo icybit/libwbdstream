@@ -31,7 +31,7 @@ public:
 	CharacteristicVector(unsigned __int64 time_updated);
 
 	// Might be negative number
-	void AddNeighbors(unsigned __int8 count);
+	void AddNeighbors(int count);
 
 	void AddRecord(unsigned __int64 time_now);
 

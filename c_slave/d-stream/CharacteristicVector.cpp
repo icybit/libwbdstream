@@ -23,7 +23,7 @@ CharacteristicVector::CharacteristicVector(unsigned __int64 time_updated)
 	this->neighbors_ = 0;
 }
 
-void CharacteristicVector::AddNeighbors(unsigned __int8 count)
+void CharacteristicVector::AddNeighbors(int count)
 {
 	this->neighbors_ += count;
 }

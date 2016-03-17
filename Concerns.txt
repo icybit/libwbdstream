@@ -4,9 +4,11 @@
 or is it enough to know whether the grid is DENSE or TRANSITIONAL? Or we don't care about none of those?
 4. Statuses are set/changed in c-slave. UpdateDensities in InitialClustering and AdjustClustering. Synchronization back to b-slave needed.
 To much communication? Can it be done in b-slave? No, because it will ruin chances to remove sporadic grids?
-5. NEED TO BE FIXED - AdjustClustering - TRANSITIONAL grid might not catch dense grids.
-6. DROP POINTERS? Too much data for stack? Default - 1MB, up to 1GB. What if we start couple of threads in the same machine. What about stack overflow?
+ANSWER - C-slave updates buffer and sends it back to b-slave;
+5. DONE - NEED TO BE FIXED - AdjustClustering - TRANSITIONAL grid might not catch dense grids.
+6. FORGET ABOUT IT - DROP POINTERS? Too much data for stack? Default - 1MB, up to 1GB. What if we start couple of threads in the same machine. What about stack overflow?
 7. Rebuilding Clusters from characteristic vectors. TRY IT!
 8. Who is responsible for managing coordinates/ratios in different lattitudes/longtitudes? USE haversine formula.
 At this point c-slave "plays" with step variable to determine it's neighbors - calculates it's position. In different areas step is different -
 recalculate'int won't work. Should I get grids with their normalized coordinates?
+ANSWER - B-slave enforces grid size using haversine formula. C-slave calculates step between two grids using the same formula.
