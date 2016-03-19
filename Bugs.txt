@@ -1,0 +1,1 @@
+1. Gap time - 600. How come AdjustClustering does 605 Iterations for CHANGED grids?

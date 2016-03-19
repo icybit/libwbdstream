@@ -25,7 +25,7 @@
 
 using namespace std;
 
-#define DIMENSIONS 100
+#define DIMENSIONS 200
 #define TOTAL_GRIDS DIMENSIONS*DIMENSIONS
 #define NO_OF_CYCLES 750000
 
@@ -133,7 +133,7 @@ int main() {
 	CalculateDensityParams(d_m, d_l);
 	cout << "Dm: " << d_m << ", Dl: " << d_l << endl;
 	// fake d_m - just for testing;
-	//d_m = 0.95;
+	d_m = 2.98;
 	gap = CalculateGapTime();
 	// fake gap time - for testing;
 	gap = 600;
@@ -143,7 +143,7 @@ int main() {
 	int timer = 0;
 	vector<Key> points;
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 20; i++)
 	{
 		points.push_back(Key(rand() % DIMENSIONS, rand() % DIMENSIONS));
 	}
@@ -154,13 +154,26 @@ int main() {
 	points.push_back(Key(10,10));
 	points.push_back(Key(8,9));*/
 	auto start0 = std::chrono::high_resolution_clock::now();
+	/*string path;
+	path = ClusterToPath(CENTER_Y, CENTER_X);
+	str_length;
+
+	str_length = path.length();
+	while (1)
+	{
+		zmq::message_t message(str_length);
+		memcpy(message.data(), path.c_str(), str_length);
+		publisher.send(message);
+		Sleep(200);
+	}*/
+
 	for (int i = 0; i < NO_OF_CYCLES; i++)
 	{
 		GenerateRandomPair(x, y, i, points);
 		key = Key(x, y);
 
 		PushCoords(x, y, publisher, CENTER_Y, CENTER_X);
-		//Sleep(5);
+		Sleep(5);
 
 		if (!grid_list.count(key))
 		{
@@ -177,7 +190,7 @@ int main() {
 			//PrintTable(grid_list, time_now);
 
 			PushClusters(clusters, publisher);
-			//Sleep(5);
+			Sleep(5);
 
 		}
 		else if (time_now % gap == 0 && time_now != 0)
@@ -187,7 +200,7 @@ int main() {
 			AdjustClustering(grid_list, clusters, time_now, d_m, d_l, counter++);
 			auto end1 = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> diff1 = end1 - start1;
-		//	cout << diff1.count() << " s. TIME TO GET PATH " << endl << endl;
+			cout << diff1.count() << " s. TIME TO GET PATH " << endl << endl;
 
 			for (int j = 0; j < points.size() - 1; j++)
 			{
@@ -206,7 +219,7 @@ int main() {
 			//PrintTable(grid_list, time_now);
 
 			PushClusters(clusters, publisher);
-			//Sleep(5);
+			Sleep(5);
 		}
 		time_now++;
 	}
@@ -348,6 +361,7 @@ void InitialClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int
 		}
 	}
 	ResetGridsStatusToUnchanged(grid_list);
+	RemoveEmptyClusters(clusters);
 }
 
 void UpdateDensities(Gridlist & grid_list, unsigned __int64 time_now, float d_m, float d_l)
@@ -596,9 +610,9 @@ bool RenameCluster(Clusters & clusters, Gridlist & grid_list, unsigned int label
 void SplitCluster(Clusters & clusters, Gridlist & grid_list, vector<int> checklist, unsigned int label, int count)
 {
 	Key key;
-	Cluster * new_clusters[4];
+	Cluster * new_clusters[6];
 	Cluster * cluster = clusters[label];
-	unsigned int new_labels[4] = { 0, 0, 0, 0 };
+	unsigned int new_labels[6] = { 0, 0, 0, 0, 0, 0 };
 	int index = 0;
 	unsigned int temp_label = 0;
 	clusters[temp_label] = clusters[label];
@@ -814,6 +828,8 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 	RemoveSporadic(grid_list, time_now);
 	UpdateDensities(grid_list, time_now, d_m, d_l);
 	int cnt = -1;
+	int counter_adjusted = 0;
+	//cout << counter << endl;
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{	
 		// Debuging "flags"
@@ -822,15 +838,16 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 		{
 			cout << "Before" << endl;
 		}
-		//if (cnt == 678 && counter == 53)
-		if (cnt == 220 && counter == 3)
+		if (counter == 985)
 		{
-			cout << "That's the mofo" << endl;
+			if (cnt == 509)
+				cout << "Gotcha" << endl;
 			//PrintGridsByClusters(clusters, grid_list);
 		}
 		//
 		if (it->second->is_changed())
 		{
+			counter_adjusted++;
 			status = it->second->get_status();
 			key = it->first;
 			vect = it->second;
@@ -844,7 +861,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 
 					if (vect->get_status() == SPARSE_FROM_DENSE)
 					{
-						// if clusters was names after this grid we have to rename cluster - grid is being deleted
+						// if cluster was named after this grid we have to rename cluster - grid is being removed
 						if (label == LabelHash(key))
 						{
 							RenameCluster(clusters, grid_list, label);
@@ -858,10 +875,6 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 					GetNeighbors(key.x_, key.y_, neighbors);
 					UpdateNeighborsScores(grid_list, neighbors, score, vect->get_label());
 					Cluster * cluster = clusters[label];
-					if (key == Key(90, 55))
-					{
-						cout << "Gotcha" << endl;
-					}
 					clusters[label]->RemoveElement(key.x_, key.y_);
 					vect->set_label(NO_CLASS);
 					score = vect->get_neighbors();
@@ -871,9 +884,6 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 					{
 						CheckIfConnected(clusters, grid_list, label);
 					}
-				}
-				else {
-					cout << "SPARSE GRID WITH CLASS??? WHAT???" << endl;
 				}
 			}
 			// TRANSITIONAL
@@ -897,6 +907,8 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 									if (score <= OUTSIDE_GRID_BOUNDARY)
 									{
 										vect->set_label(label);
+										vect->AddNeighbors(score);
+										UpdateNeighborsScores(grid_list, neighbors, VALUE_TRANSITIONAL, label);
 										clusters[label]->AddElement(GridTuple(key.x_, key.y_, vect->get_status()));
 										CallClusteringOnGrid(key, grid_list, clusters);
 										break;
@@ -910,7 +922,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 				{
 					if (status == TRANSITIONAL_FROM_DENSE)
 					{
-						// if clusters was named after this grid we have to rename cluster - grid is being deleted
+						// if cluster was named after this grid we have to rename cluster - grid might be removed
 						if (label == LabelHash(key))
 						{
 							RenameCluster(clusters, grid_list, label);
@@ -951,19 +963,24 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 							if (grid_list.count(neighbors[i]))
 							{
 								vect_neighbor = grid_list[neighbors[i]];
-								if (vect_neighbor->get_status() < DENSE_FROM_SPARSE
-									&& vect->get_label() == vect_neighbor->get_label()
-									&& vect_neighbor->get_neighbors() < VALUE_CAN_ADD)
+								if (vect->get_label() == vect_neighbor->get_label()
+									&& vect_neighbor->get_status() < DENSE_FROM_SPARSE
+									&& vect_neighbor->get_neighbors() <= VALUE_CAN_ADD)
 								{
 									CallClusteringOnGrid(neighbors[i], grid_list, clusters);
 								}
 							}
 						}
 					}
+					else if (vect->get_status() == DENSE)
+					{
+						CallClusteringOnGrid(key, grid_list, clusters);
+					}
 					else
 					{
-						score = VALUE_DENSE;
-						CallClusteringOnGrid(key, grid_list, clusters);
+						// DENSE FROM SPARSE THAT HAS CLASS. IT SHOULDN'T!
+						//cout << "Does this happen?" << endl;
+						//cout << (int)vect->get_status() << " " << vect->get_label() << " " << vect->get_density() << endl;				
 					}
 				}
 			}
@@ -972,8 +989,9 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, unsigned __int6
 		{
 			cout << "After" << endl;
 		}
-		cout << cnt << " " << counter << " After looking through everyone" << endl;
+		//cout << cnt << " " << counter << " After looking through everyone" << endl;
 	}
+	cout << counter_adjusted << endl;
 	ResetGridsStatusToUnchanged(grid_list);
 	RemoveEmptyClusters(clusters);
 }
@@ -1125,7 +1143,7 @@ string CreatePathJsonString(vector<Key> & path)
 
 	for (auto it = path.begin(); it != path.end(); ++it)
 	{
-		ss << "[" << it->y_ << "," << it->x_ << "],";
+		ss << "[" << it->y_ << "," << it->x_<< "],";
 	}
 	ss.seekp(-1, ss.cur);
 	ss << "]}";
