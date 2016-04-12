@@ -41,10 +41,6 @@ public:
 		return grids_[index];
 	}
 
-	void GetPair(int index, float & x, float & y);
-
-	void MergeClusters(Cluster * cluster);
-
 	GridTuple PopBack();
 
 	void RemoveElement(int index);

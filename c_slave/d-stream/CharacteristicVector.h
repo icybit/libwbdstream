@@ -30,8 +30,7 @@ public:
 
 	CharacteristicVector(unsigned __int64 time_updated);
 
-	// Might be negative number
-	void AddNeighbors(int count);
+	CharacteristicVector(unsigned char * buffer);
 
 	void AddRecord(unsigned __int64 time_now);
 
@@ -48,8 +47,6 @@ public:
 	void set_changed() { this->changed_ = true; }
 
 	void set_unchanged() { this->changed_ = false; }
-
-	void reset_neighbors() { this->neighbors_ = 0; }
 	
 	// Getters
 
@@ -63,9 +60,6 @@ public:
 	//Returns label of the grid (ID of the cluster)
 	unsigned int get_label() { return label_; }
 
-	//Returns neighboring points
-	unsigned __int8 get_neighbors() { return neighbors_; }
-
 	//Returns status, SPORADIC, SPARSE, TRANSITIONAL etc; 
 	unsigned __int8 get_status() { return status_; }
 
@@ -78,7 +72,6 @@ private:
 	unsigned __int64 time_updated_;
 	float density_;
 	unsigned int label_; //cluster label
-	unsigned __int8 neighbors_; // neighboring "points" - to determine whether transitional grid can add grids to cluster it belongs to
 	unsigned __int8 status_; // sporadic/sparse/transitional/dense
 	bool changed_; 
 };

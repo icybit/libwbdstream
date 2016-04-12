@@ -6,26 +6,34 @@
 CharacteristicVector::CharacteristicVector()
 {
 	this->time_updated_ = 0;
+	this->density_ = 0.0f;
 	this->label_ = NO_CLASS;
 	this->status_ = INITIAL;
-	this->density_ = 0.0f;
 	this->changed_ = true;
-	this->neighbors_ = 0;
 }
 
 CharacteristicVector::CharacteristicVector(unsigned __int64 time_updated)
 {
 	this->time_updated_ = time_updated;
+	this->density_ = 1.0f; // Since it's created by hit, add one
 	this->label_ = NO_CLASS;
 	this->status_ = INITIAL;
-	this->density_ = 1.0f; // Since it's created by hit, add one
 	this->changed_ = true;
-	this->neighbors_ = 0;
 }
 
-void CharacteristicVector::AddNeighbors(int count)
+CharacteristicVector::CharacteristicVector(unsigned char * buffer)
 {
-	this->neighbors_ += count;
+	unsigned int index = 0;
+	memcpy(&this->time_updated_, &buffer[index], sizeof(this->time_updated_));
+	index += sizeof(this->time_updated_);
+	memcpy(&this->density_, &buffer[index], sizeof(this->density_));
+	index += sizeof(this->density_);
+	memcpy(&this->label_, &buffer[index], sizeof(this->label_));
+	index += sizeof(this->label_);
+	memcpy(&this->status_, &buffer[index], sizeof(this->status_));
+	index += sizeof(this->status_);
+	memcpy(&this->changed_, &buffer[index], sizeof(this->changed_));
+	index += sizeof(this->changed_);
 }
 
 void CharacteristicVector::AddRecord(unsigned __int64 time_now)
