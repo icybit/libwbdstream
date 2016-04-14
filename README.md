@@ -1,3 +1,3 @@
-# WiseBud C-SLAVE #
+# WiseBud D-STREAM #
 
-The WiseBud C-SLAVE Repository.
+The WiseBud D-STREAM Repository.
