@@ -1,7 +1,7 @@
 #include "Cluster.h"
+#include "Common.h"
 
-
-Cluster::Cluster(unsigned int label)
+Cluster::Cluster(uint32_t label)
 {
 	this->label_ = label;
 }
@@ -20,7 +20,7 @@ void Cluster::RemoveElement(int index)
 
 void Cluster::RemoveElement(float x, float y)
 {
-	int i;
+	uint32_t i;
 	bool found = false;
 	for (i = 0; i < grids_.size(); i++)
 	{

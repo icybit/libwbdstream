@@ -1,23 +1,21 @@
-#ifndef STM_D_STREAM_CLUSTER_H_
-#define STM_D_STREAM_CLUSTER_H_
+#ifndef _DSTREAM_CLUSTER_H_
+#define _DSTREAM_CLUSTER_H_
 
-#include <tuple>
+#include <stdint.h>
 #include <vector>
 
-#ifndef EPSILON
-#define EPSILON 0.00001f
-#endif EPSILON
+#include "Common.h"
 
 struct GridTuple
 {
 	float x;
 	float y;
 	// Do we need to know concrete density or is it enough to know whether grid is dense or transitional
-	unsigned __int8 density_status;
+	uint8_t density_status;
 
 	GridTuple() {}
 
-	GridTuple(float x, float y, unsigned __int8 density_status)
+	GridTuple(float x, float y, uint8_t density_status)
 		: x(x), y(y), density_status(density_status) {}
 
 	bool operator==(const GridTuple & g)
@@ -31,7 +29,7 @@ class Cluster
 public:
 	Cluster() {}
 
-	Cluster(unsigned int label);
+	Cluster(uint32_t label);
 	
 	void AddElement(GridTuple grid) {
 		grids_.push_back(grid);
@@ -57,17 +55,17 @@ public:
 		return grids_.end();
 	}
 
-	int get_size() { return (int)grids_.size(); }
+	uint32_t get_size() { return (int)grids_.size(); }
 
-	unsigned int get_label() { return this->label_; }
+	uint32_t get_label() { return this->label_; }
 
 	void set_label(unsigned int label) {
 		this->label_ = label;
 	}
 private:
-	unsigned int label_;
+	uint32_t label_;
 	std::vector<GridTuple> grids_;
 };
 
-#endif // !STM_D_STREAM_CLUSTER_H_
+#endif // !_DSTREAM_CLUSTER_H_
 
