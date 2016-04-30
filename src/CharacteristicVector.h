@@ -2,7 +2,6 @@
 #define _DSTREAM_CHARACTERISTIC_VECTOR_H_
 
 #include <stdint.h>
-#include <tuple>
 
 #include "Common.h"
 

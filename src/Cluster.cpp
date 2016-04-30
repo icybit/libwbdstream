@@ -24,7 +24,7 @@ void Cluster::RemoveElement(float x, float y)
 	bool found = false;
 	for (i = 0; i < grids_.size(); i++)
 	{
-		if (abs(grids_[i].x - x) < EPSILON && abs(grids_[i].y - y) < EPSILON)
+		if (std::abs(grids_[i].x - x) < EPSILON && std::abs(grids_[i].y - y) < EPSILON)
 		{
 			found = true;
 			break;

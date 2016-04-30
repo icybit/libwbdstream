@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string>
 #include <string.h>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -154,7 +153,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_n
 }
 
 /* Calculate Dm and Dl;*/
-DSTREAM_PUBLIC void CalculateDensityParams(float & d_m, float & d_l)
+void CalculateDensityParams(float & d_m, float & d_l)
 {
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	d_m = C_M / denumerator;

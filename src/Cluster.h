@@ -1,6 +1,7 @@
 #ifndef _DSTREAM_CLUSTER_H_
 #define _DSTREAM_CLUSTER_H_
 
+#include <cmath>
 #include <stdint.h>
 #include <vector>
 
@@ -20,7 +21,7 @@ struct GridTuple
 
 	bool operator==(const GridTuple & g)
 	{
-		return (abs(this->x - g.x) < EPSILON && abs(this->y - g.y) < EPSILON);
+		return (std::abs(this->x - g.x) < EPSILON && std::abs(this->y - g.y) < EPSILON);
 	}
 };
 
