@@ -9,7 +9,7 @@ LIB_H_PATH := /usr/include
 
 CC := g++
 DEBUG := -g
-CFLAGS := -Wall -Werror -pedantic $(DEBUG) -std=c++11 -fvisibility=hidden -DWB_DSTREAM_COMPILATION=1
+CFLAGS := -Wall -Werror -pedantic $(DEBUG) -std=c++0x -fvisibility=hidden -DWB_DSTREAM_COMPILATION=1
 LDFLAGS := -Wl,-soname,$(LIB_NAME).$(LIB_VER_MAJOR).$(LIB_VER_MINOR)
 SRCEXT := cpp
 
