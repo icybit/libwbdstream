@@ -18,6 +18,7 @@ extern "C" {
 	void dstream_char_vect_free(const dstream_char_vect_t * vect);
 
 	void dstream_char_vect_add_record(dstream_char_vect_t * vect, uint64_t time_now);
+	void dstream_char_vect_print(dstream_char_vect_t * vect);
 	void dstream_char_vect_serialize(dstream_char_vect_t * vect, uint8_t * buffer);
 	void dstream_char_vect_update_density(dstream_char_vect_t * vect, uint64_t time_now);
 	

@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <cstring>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "Common.h"
 
@@ -46,6 +48,11 @@ void CharacteristicVector::AddRecord(uint64_t time_now)
 {
 	this->UpdateDensity(time_now);
 	this->density_++;
+}
+
+void CharacteristicVector::Print()
+{
+	printf("Time updated: %llu , density: %4.4f, label: %u, status: %d, changed: %d.\n", (unsigned long long)this->time_updated_, this->density_, this->label_, this->status_, this->changed_);
 }
 
 void CharacteristicVector::Serialize(uint8_t * buffer)
@@ -125,7 +132,7 @@ void CharacteristicVector::SetStatus(uint8_t status)
 
 void CharacteristicVector::UpdateDensity(uint64_t time_now)
 {
-	this->density_ = (float)pow(DECAY_FACTOR, (double)(time_now - this->time_updated_)) * this->density_; /* (5) - research paper */
+	this->density_ = (float)pow(DECAY_FACTOR, (float)(time_now - this->time_updated_)) * this->density_; /* (5) - research paper */
 	this->time_updated_ = time_now;
 }
 
@@ -145,7 +152,10 @@ DSTREAM_PUBLIC void dstream_char_vect_add_record(dstream_char_vect_s * vect, uin
 {
 	AS_TYPE(CharacteristicVector, vect)->AddRecord(time_now);
 }
-
+DSTREAM_PUBLIC void dstream_char_vect_print(dstream_char_vect_t * vect)
+{
+	AS_TYPE(CharacteristicVector, vect)->Print();
+}
 DSTREAM_PUBLIC void dstream_char_vect_serialize(dstream_char_vect_s * vect, uint8_t * buffer)
 {
 	AS_TYPE(CharacteristicVector, vect)->Serialize(buffer);

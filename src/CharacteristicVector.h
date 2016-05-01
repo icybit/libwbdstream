@@ -15,6 +15,8 @@ public:
 	CharacteristicVector(uint8_t * buffer);
 
 	void AddRecord(uint64_t time_now);
+
+	void Print();
 	
 	void Serialize(uint8_t * buffer);
 
