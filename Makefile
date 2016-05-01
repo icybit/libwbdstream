@@ -1,6 +1,6 @@
 #Reference http://www.iram.fr/~roche/code/c++/AddNumbers.html
 
-LIB_NAME := libdstream.so
+LIB_NAME := libwbdstream.so
 LIB_VER := 0.1.0
 LIB_VER_MAJOR := $(shell echo $(LIB_VER) | cut -f1 -d.)
 LIB_VER_MINOR := $(shell echo $(LIB_VER) | cut -f2 -d.)
@@ -9,7 +9,7 @@ LIB_H_PATH := /usr/include
 
 CC := g++
 DEBUG := -g
-CFLAGS := -Wall -Werror -pedantic $(DEBUG) -std=c++0x -fvisibility=hidden -DWB_DSTREAM_COMPILATION=1
+CFLAGS := -Wall -Werror -pedantic $(DEBUG) -std=c++11 -fvisibility=hidden -DWB_DSTREAM_COMPILATION=1
 LDFLAGS := -Wl,-soname,$(LIB_NAME).$(LIB_VER_MAJOR).$(LIB_VER_MINOR)
 SRCEXT := cpp
 

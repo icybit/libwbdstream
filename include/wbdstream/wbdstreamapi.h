@@ -10,10 +10,12 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <unordered_map>
+	#ifdef __cplusplus
+		#include <unordered_map>
+		typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
+		typedef std::unordered_map<unsigned int, Cluster *> Clusters;
+	#endif
 
-	typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
-	typedef std::unordered_map<unsigned int, Cluster *> Clusters;
 
 	void Clusterize(unsigned char * buffer, uint32_t buffer_size);
 
