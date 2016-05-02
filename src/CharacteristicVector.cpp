@@ -141,11 +141,11 @@ DSTREAM_PUBLIC dstream_char_vect_t * dstream_char_vect_new(uint64_t time_now)
 	return AS_TYPE(dstream_char_vect_s, new CharacteristicVector(time_now));
 }
 
-DSTREAM_PUBLIC void dstream_char_vect_free(dstream_char_vect_s * vect)
+DSTREAM_PUBLIC void dstream_char_vect_free(dstream_char_vect_s ** vect)
 {
-	if (!vect)
+	if (!*vect)
 		return;
-	delete AS_TYPE(CharacteristicVector, vect);
+	delete AS_TYPE(CharacteristicVector, *vect);
 }
 
 DSTREAM_PUBLIC void dstream_char_vect_add_record(dstream_char_vect_s * vect, uint64_t time_now)
