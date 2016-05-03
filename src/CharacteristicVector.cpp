@@ -141,14 +141,14 @@ DSTREAM_PUBLIC dstream_char_vect_t * dstream_char_vect_new(uint64_t time_now)
 	return AS_TYPE(dstream_char_vect_s, new CharacteristicVector(time_now));
 }
 
-DSTREAM_PUBLIC void dstream_char_vect_free(dstream_char_vect_s ** vect)
+DSTREAM_PUBLIC void dstream_char_vect_free(void ** vect)
 {
 	if (!*vect)
 		return;
 	delete AS_TYPE(CharacteristicVector, *vect);
 }
 
-DSTREAM_PUBLIC void dstream_char_vect_add_record(dstream_char_vect_s * vect, uint64_t time_now)
+DSTREAM_PUBLIC void dstream_char_vect_add_record(dstream_char_vect_t * vect, uint64_t time_now)
 {
 	AS_TYPE(CharacteristicVector, vect)->AddRecord(time_now);
 }
@@ -156,12 +156,12 @@ DSTREAM_PUBLIC void dstream_char_vect_print(dstream_char_vect_t * vect)
 {
 	AS_TYPE(CharacteristicVector, vect)->Print();
 }
-DSTREAM_PUBLIC void dstream_char_vect_serialize(dstream_char_vect_s * vect, uint8_t * buffer)
+DSTREAM_PUBLIC void dstream_char_vect_serialize(dstream_char_vect_t * vect, uint8_t * buffer)
 {
 	AS_TYPE(CharacteristicVector, vect)->Serialize(buffer);
 }
 
-DSTREAM_PUBLIC void dstream_char_vect_update_density(dstream_char_vect_s * vect, uint64_t time_now)
+DSTREAM_PUBLIC void dstream_char_vect_update_density(dstream_char_vect_t * vect, uint64_t time_now)
 {
 	AS_TYPE(CharacteristicVector, vect)->UpdateDensity(time_now);
 }
