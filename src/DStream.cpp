@@ -22,23 +22,31 @@ typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
 
-extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size, uint64_t time_now)
+extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size)
 {
+	uint64_t time_now;
 	Gridlist grid_list;
 	Clusters clusters;
 	float d_m, d_l;
-	
 	
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	
+	MergeChangesToBuffer(buffer, buffer_size, grid_list);
 
+	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
+	{
+		delete it->second;
+	}
+	for (auto it = clusters.begin(); it != clusters.end(); ++it)
+	{
+		delete it->second;
+	}
 	/*
-	Changes need to be merged back to the buffer;
+	Clusters need to be pushed to key-value store;
 	*/
-	
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
@@ -433,23 +441,21 @@ void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gr
 
 	float x, y;
 	Key key;
-	size_t char_vect_size = 18;
-	uint8_t char_vect[18];
+	uint8_t char_vect[CHAR_VECT_SIZE];
 
 	/* time_now */
-	memcpy(&time_now, &buffer[index], 18);
+	memcpy(&time_now, &buffer[index], sizeof(uint64_t));
 	index += sizeof(uint64_t);
 
 	while (index < buffer_size)
 	{
-		index += sizeof(nullptr);
-		memcpy(&char_vect[0], &buffer[index], 18);
-		index += char_vect_size;
 		memcpy(&x, &buffer[index], sizeof(float));
 		index += sizeof(float);
 		memcpy(&y, &buffer[index], sizeof(float));
 		index += sizeof(float);
-
+		index += sizeof(nullptr);
+		memcpy(&char_vect[0], &buffer[index], CHAR_VECT_SIZE);
+		index += CHAR_VECT_SIZE;
 		key = Key(x, y);
 		grid_list[key] = new CharacteristicVector(char_vect);
 	}
@@ -508,6 +514,44 @@ bool IsSporadic(float density, uint64_t time_updated, uint64_t time_now)
 uint32_t LabelHash(Key & key)
 {
 	return std::hash<Key>()(key);
+}
+
+void MergeChangesToBuffer(uint8_t * buffer, uint32_t buffer_size, Gridlist & grid_list)
+{
+	CharacteristicVector * vect;
+	CharacteristicVector * vect_empty;
+	float x, y;
+	Key key;
+	uint8_t char_vect[CHAR_VECT_SIZE];
+	uint32_t index = 0;
+
+	vect_empty = new CharacteristicVector();
+
+	/*Skips time_now*/
+	index += sizeof(uint64_t);
+
+	while (index < buffer_size)
+	{
+		memcpy(&x, &buffer[index], sizeof(float));
+		index += sizeof(float);
+		memcpy(&y, &buffer[index], sizeof(float));
+		index += sizeof(float);
+		index += sizeof(nullptr);
+		key = Key(x, y);
+		if (grid_list.count(key))
+		{
+			vect = grid_list[key];
+			vect->Serialize(char_vect);
+		}
+		else
+		{
+			vect_empty->Serialize(char_vect);
+		}
+
+		memcpy(&buffer[index], &char_vect[0], CHAR_VECT_SIZE);
+		index += CHAR_VECT_SIZE;
+	}
+	delete vect_empty;
 }
 
 /* Merges two clusters and deletes the second one. */

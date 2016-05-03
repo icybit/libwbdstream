@@ -15,6 +15,7 @@
 
 #define COORDS "coords"
 #define CLUSTERS "clusters"
+#define CHAR_VECT_SIZE 18
 #define DECAY_FACTOR 0.998f
 #define DIMENSIONS 40
 #define EPSILON 0.0000001f

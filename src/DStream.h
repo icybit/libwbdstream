@@ -29,6 +29,7 @@ void GenerateRandomPair(float & x, float & y, int counter, std::vector<Key> & po
 void GetNeighbors(float x, float y, Key neighbors[4]);
 bool IsSporadic(float density, uint64_t time_updated, uint64_t time_now);
 uint32_t LabelHash(Key & key);
+void MergeChangesToBuffer(uint8_t * buffer, uint32_t buffer_size, Gridlist & grid_list);
 void MergeClusters(Cluster & main_cluster, Cluster & secondary_cluster, Gridlist & grid_list, Clusters & clusters);
 void PrintClusters(Clusters & clusters);
 void PrintGridsByClusters(Clusters & clusters, Gridlist & grid_list);

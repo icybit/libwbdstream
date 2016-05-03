@@ -17,7 +17,7 @@ extern "C" {
 	#endif
 
 
-	void Clusterize(unsigned char * buffer, uint32_t buffer_size, uint64_t time_now);
+	void Clusterize(unsigned char * buffer, uint32_t buffer_size);
 	int CalculateGapTime();
 
 #ifdef __cplusplus
