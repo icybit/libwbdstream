@@ -16,6 +16,8 @@ public:
 
 	void AddRecord(uint64_t time_now);
 
+	void Merge(uint8_t * buffer);
+
 	void Print();
 	
 	void Serialize(uint8_t * buffer);

@@ -50,6 +50,15 @@ void CharacteristicVector::AddRecord(uint64_t time_now)
 	this->density_++;
 }
 
+void CharacteristicVector::Merge(uint8_t * buffer)
+{
+	int index = 0;
+	memcpy(&this->label_, &buffer[index], sizeof(this->label_));
+	index += sizeof(this->label_);
+	memcpy(&this->status_, &buffer[index], sizeof(this->status_));
+	this->set_unchanged();
+}
+
 void CharacteristicVector::Print()
 {
 	printf("Time updated: %llu , density: %4.4f, label: %u, status: %d, changed: %d.\n", (unsigned long long)this->time_updated_, this->density_, this->label_, this->status_, this->changed_);
@@ -152,10 +161,17 @@ DSTREAM_PUBLIC void dstream_char_vect_add_record(dstream_char_vect_t * vect, uin
 {
 	AS_TYPE(CharacteristicVector, vect)->AddRecord(time_now);
 }
+
+DSTREAM_PUBLIC void dstream_char_vect_merge(dstream_char_vect_t * vect, uint8_t * buffer)
+{
+	AS_TYPE(CharacteristicVector, vect)->Merge(buffer);
+}
+
 DSTREAM_PUBLIC void dstream_char_vect_print(dstream_char_vect_t * vect)
 {
 	AS_TYPE(CharacteristicVector, vect)->Print();
 }
+
 DSTREAM_PUBLIC void dstream_char_vect_serialize(dstream_char_vect_t * vect, uint8_t * buffer)
 {
 	AS_TYPE(CharacteristicVector, vect)->Serialize(buffer);

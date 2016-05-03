@@ -22,27 +22,26 @@ typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
 
-extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size)
+extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size, uint64_t time_now)
 {
-	uint64_t time_now;
 	Gridlist grid_list;
 	Clusters clusters;
 	float d_m, d_l;
-	int counter = -1;
 	
 	
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
-	AdjustClustering(grid_list, clusters, time_now, d_m, d_l, counter++);
+	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	
+
 	/*
 	Changes need to be merged back to the buffer;
 	*/
 	
 }
 
-void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l, int counter)
+void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
 {
 	uint8_t status;
 	GridTuple grid;
@@ -160,7 +159,7 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	d_l = C_L / denumerator;
 }
 
-int CalculateGapTime() {
+extern "C" DSTREAM_PUBLIC int CalculateGapTime() {
 	/* Simplyfied:
 	 Original method counts the time for sparse grid to become dense. Basically, how many hits in a row it needs to become dense.
 	 In that case gap time is too small to recluster every time.

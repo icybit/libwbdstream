@@ -12,9 +12,8 @@
 typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<unsigned int, Cluster *> Clusters;
 
-void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l, int counter);
+void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l);
 void CalculateDensityParams(float & d_m, float & d_l);
-int CalculateGapTime();
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters);
 bool CheckForDenseNeighbors(Key & key, Gridlist & grid_list);
 bool CheckIfConnected(Clusters & clusters, Gridlist & grid_list, uint32_t label);
