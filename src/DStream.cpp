@@ -22,7 +22,7 @@ typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
 
-extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size)
+extern "C" DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
 {
 	uint64_t time_now;
 	Gridlist grid_list;
@@ -47,6 +47,17 @@ extern "C" DSTREAM_PUBLIC void Clusterize(uint8_t * buffer, uint32_t buffer_size
 	/*
 	Clusters need to be pushed to key-value store;
 	*/
+}
+
+extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
+	/* Simplyfied:
+	Original method counts the time for sparse grid to become dense. Basically, how many hits in a row it needs to become dense.
+	In that case gap time is too small to recluster every time.
+	Now we count only decay factor - time for dense grid to decay to sparse.*/
+	int gap = 0;
+	double dense_to_sparse = log(C_L / C_M) / log(DECAY_FACTOR);/* (11) - research paper*/
+	gap = (int)floor(dense_to_sparse);
+	return gap;
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
@@ -165,17 +176,6 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	d_m = C_M / denumerator;
 	d_l = C_L / denumerator;
-}
-
-extern "C" DSTREAM_PUBLIC int CalculateGapTime() {
-	/* Simplyfied:
-	 Original method counts the time for sparse grid to become dense. Basically, how many hits in a row it needs to become dense.
-	 In that case gap time is too small to recluster every time.
-	 Now we count only decay factor - time for dense grid to decay to sparse.*/
-	int gap = 0;
-	double dense_to_sparse = log(C_L / C_M) / log(DECAY_FACTOR);/* (11) - research paper*/
-	gap = (int)floor(dense_to_sparse);
-	return gap;
 }
 
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
