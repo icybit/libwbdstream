@@ -62,17 +62,17 @@ extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 
 extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_coords(double dx, double dy, double & x, double & y)
 {
-	y = 360 * dy / (2 * M_PI * R);
+	y = 360 * dy / (2 * M_PI * R_EARTH);
 	double ry = y * M_PI / 180;
-	double r = sin(M_PI_2 - ry) * R;
+	double r = sin(M_PI_2 - ry) * R_EARTH;
 	x = 360 * dx / (2 * M_PI * r);
 }
 
 extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_distance(double x, double y, double & dx, double & dy)
 {
-	dy = (2 * M_PI * R * y) / 360;
+	dy = (2 * M_PI * R_EARTH * y) / 360;
 	double ry = y * M_PI / 180;
-	double r = sin(M_PI_2 - ry) * R;
+	double r = sin(M_PI_2 - ry) * R_EARTH;
 	dx = (2 * M_PI * r * x) / 360;
 }
 
