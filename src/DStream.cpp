@@ -5,6 +5,8 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <sstream>
 #include <stdlib.h>
 #include <stdio.h>
@@ -60,20 +62,18 @@ extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	return gap;
 }
 
-extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_coords(double dx, double dy, double & x, double & y)
+extern "C" DSTREAM_PUBLIC double * dstream_calculate_xy_coords(double dx, double dy)
 {
-	y = 360 * dy / (2 * M_PI * R_EARTH);
-	double ry = y * M_PI / 180;
-	double r = sin(M_PI_2 - ry) * R_EARTH;
-	x = 360 * dx / (2 * M_PI * r);
+	double * coords = new double[2];
+	CalculateXYCoords(dx, dy, coords[0], coords[1]);
+	return coords;
 }
 
-extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_distance(double x, double y, double & dx, double & dy)
+extern "C" DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 {
-	dy = (2 * M_PI * R_EARTH * y) / 360;
-	double ry = y * M_PI / 180;
-	double r = sin(M_PI_2 - ry) * R_EARTH;
-	dx = (2 * M_PI * r * x) / 360;
+	double * distances = new double[2];
+	CalculateXYDistances(x, y, distances[0], distances[1]);
+	return distances;
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
@@ -241,6 +241,22 @@ void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
 		}
 
 	}
+}
+
+void CalculateXYCoords(double dx, double dy, double & x, double & y)
+{
+	y = 360 * dy / (2 * M_PI * R_EARTH);
+	double ry = y * M_PI / 180;
+	double r = sin(M_PI_2 - ry) * R_EARTH;
+	x = 360 * dx / (2 * M_PI * r);
+}
+
+void CalculateXYDistances(double x, double y, double & dx, double & dy)
+{
+	dy = (2 * M_PI * R_EARTH * y) / 360;
+	double ry = y * M_PI / 180;
+	double r = sin(M_PI_2 - ry) * R_EARTH;
+	dx = (2 * M_PI * r * x) / 360;
 }
 
 /* Checks if cluster is connected. Splits it if not.*/

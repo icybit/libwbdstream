@@ -15,6 +15,8 @@ typedef std::unordered_map<unsigned int, Cluster *> Clusters;
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l);
 void CalculateDensityParams(float & d_m, float & d_l);
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters);
+void CalculateXYCoords(double dx, double dy, double & x, double & y);
+void CalculateXYDistances(double x, double y, double & dx, double & dy);
 bool CheckForDenseNeighbors(Key & key, Gridlist & grid_list);
 bool CheckIfConnected(Clusters & clusters, Gridlist & grid_list, uint32_t label);
 void CheckNeighborsConnectivity(Key grid, Gridlist & grid_list, Clusters & clusters);

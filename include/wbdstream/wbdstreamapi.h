@@ -19,8 +19,8 @@ extern "C" {
 
 	void dstream_clusterize(unsigned char * buffer, uint32_t buffer_size);
 	int dstream_calculate_gap_time();
-	void dstream_calculate_xy_coords(double dx, double dy, double & x, double & y);
-	void dstream_calculate_xy_distance(double x, double y, double & dx, double & dy);
+	double * dstream_calculate_xy_coords(double dx, double dy);
+	double * dstream_calculate_xy_distances(double x, double y);
 
 #ifdef __cplusplus
 }
