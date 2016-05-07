@@ -60,6 +60,22 @@ extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	return gap;
 }
 
+extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_coords(double dx, double dy, double & x, double & y)
+{
+	y = 360 * dy / (2 * M_PI * R);
+	double ry = y * M_PI / 180;
+	double r = sin(M_PI_2 - ry) * R;
+	x = 360 * dx / (2 * M_PI * r);
+}
+
+extern "C" DSTREAM_PUBLIC void dstream_calculate_xy_distance(double x, double y, double & dx, double & dy)
+{
+	dy = (2 * M_PI * R * y) / 360;
+	double ry = y * M_PI / 180;
+	double r = sin(M_PI_2 - ry) * R;
+	dx = (2 * M_PI * r * x) / 360;
+}
+
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
 {
 	uint8_t status;
