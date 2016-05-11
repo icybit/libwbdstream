@@ -45,6 +45,10 @@ public:
 	static float c_m;
 	static float decay_factor;
 	static int total_grids;
+
+	static void Common::InitParams(float c_l, float c_m, float decay_factor, int total_grids);
+	static void Common::InitTotalGrids(int total_grids);
+
 };
 
 
