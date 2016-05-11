@@ -141,7 +141,7 @@ void CharacteristicVector::SetStatus(uint8_t status)
 
 void CharacteristicVector::UpdateDensity(uint64_t time_now)
 {
-	this->density_ = (float)pow(DECAY_FACTOR, (float)(time_now - this->time_updated_)) * this->density_; /* (5) - research paper */
+	this->density_ = (float)pow(Common::decay_factor, (float)(time_now - this->time_updated_)) * this->density_; /* (5) - research paper */
 	this->time_updated_ = time_now;
 }
 

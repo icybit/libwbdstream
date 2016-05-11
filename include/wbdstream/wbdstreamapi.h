@@ -21,6 +21,9 @@ extern "C" {
 	int dstream_calculate_gap_time();
 	double * dstream_calculate_xy_coords(double dx, double dy);
 	double * dstream_calculate_xy_distances(double x, double y);
+	void dstream_init_params(float c_l, float c_m, float decay_factor, int total_grids);
+	void dstream_init_total_grids(int total_grids);
+
 
 #ifdef __cplusplus
 }

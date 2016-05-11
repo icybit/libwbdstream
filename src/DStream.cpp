@@ -57,7 +57,7 @@ extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	In that case gap time is too small to recluster every time.
 	Now we count only decay factor - time for dense grid to decay to sparse.*/
 	int gap = 0;
-	double dense_to_sparse = log(C_L / C_M) / log(DECAY_FACTOR);/* (11) - research paper*/
+	double dense_to_sparse = log(Common::c_l / Common::c_m) / log(Common::decay_factor);/* (11) - research paper*/
 	gap = (int)floor(dense_to_sparse);
 	return gap;
 }
@@ -189,9 +189,9 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_n
 /* Calculate Dm and Dl;*/
 void CalculateDensityParams(float & d_m, float & d_l)
 {
-	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
-	d_m = C_M / denumerator;
-	d_l = C_L / denumerator;
+	float denumerator = Common::total_grids * (1 - Common::decay_factor);
+	d_m = Common::c_m / denumerator;
+	d_l = Common::c_l / denumerator;
 }
 
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
@@ -461,8 +461,8 @@ float DensityThresholdFunction(uint64_t time_updated, uint64_t time_now)
 {
 	float threshold = 0.0f;
 	/* (27) - research paper */
-	float numerator = float(C_L * (1 - pow(DECAY_FACTOR, time_now - time_updated + 1)));
-	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
+	float numerator = float(Common::c_l * (1 - pow(Common::decay_factor, time_now - time_updated + 1)));
+	float denumerator = Common::total_grids * (1 - Common::decay_factor);
 	threshold = numerator / denumerator;
 	return threshold;
 }
@@ -495,7 +495,7 @@ void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gr
 
 float EstimatedDensitiesSum(uint64_t time_now)
 {
-	float estimated_sum = float((1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR)); // up from (8) - research paper
+	float estimated_sum = float((1 - pow(Common::decay_factor, time_now + 1)) / (1 - Common::decay_factor)); // up from (8) - research paper
 	return estimated_sum;
 }
 

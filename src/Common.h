@@ -10,7 +10,7 @@
 #endif
 
 // Parameters controlling the treshold to recognize dense and sparse grids;
-#define C_M 2.0f // min threshold for dense grid
+#define C_M 3.0f // min threshold for dense grid
 #define C_L 0.8f // max threshold for sparse grid
 
 #define COORDS "coords"
@@ -37,5 +37,16 @@
 #define DENSE 8
 #define DENSE_FROM_TRANSITIONAL 9
 #define INITIAL 10
+
+class Common
+{
+public:
+	static float c_l;
+	static float c_m;
+	static float decay_factor;
+	static int total_grids;
+};
+
+
 
 #endif /* __DSTREAM_COMMON_H__ */
