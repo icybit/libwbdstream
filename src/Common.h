@@ -9,9 +9,8 @@
 #define DSTREAM_LOCAL
 #endif
 
-// Parameters controlling the treshold to recognize dense and sparse grids;
-#define C_M 3.0f // min threshold for dense grid
-#define C_L 0.8f // max threshold for sparse grid
+#define C_M 3.0f /* min threshold for dense grid */
+#define C_L 0.8f /* max threshold for sparse grid */
 
 #define COORDS "coords"
 #define CLUSTERS "clusters"
@@ -46,8 +45,8 @@ public:
 	static float decay_factor;
 	static int total_grids;
 
-	static void Common::InitParams(float c_l, float c_m, float decay_factor, int total_grids);
-	static void Common::InitTotalGrids(int total_grids);
+	static void InitParams(float c_l, float c_m, float decay_factor, int total_grids);
+	static void InitTotalGrids(int total_grids);
 
 };
 
