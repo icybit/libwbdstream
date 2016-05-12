@@ -24,7 +24,7 @@ typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
 
-extern "C" DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
+DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
 {
 	uint64_t time_now;
 	Gridlist grid_list;
@@ -51,7 +51,7 @@ extern "C" DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buf
 	*/
 }
 
-extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
+DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	/* Simplyfied:
 	Original method counts the time for sparse grid to become dense. Basically, how many hits in a row it needs to become dense.
 	In that case gap time is too small to recluster every time.
@@ -62,18 +62,28 @@ extern "C" DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	return gap;
 }
 
-extern "C" DSTREAM_PUBLIC double * dstream_calculate_xy_coords(double dx, double dy)
+DSTREAM_PUBLIC double * dstream_calculate_xy_coords(double dx, double dy)
 {
 	double * coords = new double[2];
 	CalculateXYCoords(dx, dy, coords[0], coords[1]);
 	return coords;
 }
 
-extern "C" DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
+DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 {
 	double * distances = new double[2];
 	CalculateXYDistances(x, y, distances[0], distances[1]);
 	return distances;
+}
+
+DSTREAM_PUBLIC void dstream_init_params(float c_l, float c_m, float decay_factor, int total_grids)
+{
+	Common::InitParams(c_l, c_m, decay_factor, total_grids);
+}
+
+DSTREAM_PUBLIC void dstream_init_total_grids(int total_grids)
+{
+	Common::InitTotalGrids(total_grids);
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
