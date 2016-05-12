@@ -53,9 +53,13 @@ void CharacteristicVector::AddRecord(uint64_t time_now)
 void CharacteristicVector::Merge(uint8_t * buffer)
 {
 	int index = 0;
-	memcpy(&this->label_, &buffer[index], sizeof(this->label_));
+	uint32_t label;
+	uint8_t status;
+	memcpy(&label, &buffer[index], sizeof(this->label_));
 	index += sizeof(this->label_);
-	memcpy(&this->status_, &buffer[index], sizeof(this->status_));
+	this->label_ = label;
+	memcpy(&status, &buffer[index], sizeof(this->status_));
+	this->status_ = status;
 	this->set_unchanged();
 }
 
