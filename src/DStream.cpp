@@ -202,6 +202,9 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	float denumerator = Common::total_grids * (1 - Common::decay_factor);
 	d_m = Common::c_m / denumerator;
 	d_l = Common::c_l / denumerator;
+	printf("Total grids: %d\n", Common::total_grids);
+	printf("Cm: %4.4f, Cl: %4.4f\n", Common::c_m, Common::c_l);
+	printf("Dm: %4.4f, Dl: %4.4f\n", d_m, d_l);
 }
 
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
