@@ -34,7 +34,6 @@ DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
-	
 	MergeChangesToBuffer(buffer, buffer_size, grid_list);
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
@@ -191,9 +190,6 @@ void CalculateDensityParams(float & d_m, float & d_l)
 	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	d_m = C_M / denumerator;
 	d_l = C_L / denumerator;
-	printf("Total grids: %d\n", TOTAL_GRIDS);
-	printf("Cm: %4.4f, Cl: %4.4f\n", C_M, C_L);
-	printf("Dm: %4.4f, Dl: %4.4f\n", d_m, d_l);
 }
 
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)

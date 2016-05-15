@@ -21,7 +21,7 @@
 #define GRIDS "grids"
 #define NO_OF_CYCLES 20000000
 #define STEP 1
-#define TOTAL_GRIDS 100
+#define TOTAL_GRIDS 400
 #define R_EARTH 6371000 
 
 #define NO_CLASS 0
