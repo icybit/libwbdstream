@@ -30,7 +30,6 @@ DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
 	Gridlist grid_list;
 	Clusters clusters;
 	float d_m, d_l;
-	
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
@@ -57,7 +56,7 @@ DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	In that case gap time is too small to recluster every time.
 	Now we count only decay factor - time for dense grid to decay to sparse.*/
 	int gap = 0;
-	double dense_to_sparse = log(Common::c_l / Common::c_m) / log(Common::decay_factor);/* (11) - research paper*/
+	double dense_to_sparse = log(C_L / C_M) / log(DECAY_FACTOR);/* (11) - research paper*/
 	gap = (int)floor(dense_to_sparse);
 	return gap;
 }
@@ -74,16 +73,6 @@ DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 	double * distances = new double[2];
 	CalculateXYDistances(x, y, distances[0], distances[1]);
 	return distances;
-}
-
-DSTREAM_PUBLIC void dstream_init_params(float c_l, float c_m, float decay_factor, int total_grids)
-{
-	Common::InitParams(c_l, c_m, decay_factor, total_grids);
-}
-
-DSTREAM_PUBLIC void dstream_init_total_grids(int total_grids)
-{
-	Common::InitTotalGrids(total_grids);
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
@@ -199,11 +188,11 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_n
 /* Calculate Dm and Dl;*/
 void CalculateDensityParams(float & d_m, float & d_l)
 {
-	float denumerator = Common::total_grids * (1 - Common::decay_factor);
-	d_m = Common::c_m / denumerator;
-	d_l = Common::c_l / denumerator;
-	printf("Total grids: %d\n", Common::total_grids);
-	printf("Cm: %4.4f, Cl: %4.4f\n", Common::c_m, Common::c_l);
+	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
+	d_m = C_M / denumerator;
+	d_l = C_L / denumerator;
+	printf("Total grids: %d\n", TOTAL_GRIDS);
+	printf("Cm: %4.4f, Cl: %4.4f\n", C_M, C_L);
 	printf("Dm: %4.4f, Dl: %4.4f\n", d_m, d_l);
 }
 
@@ -474,8 +463,8 @@ float DensityThresholdFunction(uint64_t time_updated, uint64_t time_now)
 {
 	float threshold = 0.0f;
 	/* (27) - research paper */
-	float numerator = float(Common::c_l * (1 - pow(Common::decay_factor, time_now - time_updated + 1)));
-	float denumerator = Common::total_grids * (1 - Common::decay_factor);
+	float numerator = float(C_L * (1 - pow(DECAY_FACTOR, time_now - time_updated + 1)));
+	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
 	threshold = numerator / denumerator;
 	return threshold;
 }
@@ -508,7 +497,7 @@ void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gr
 
 float EstimatedDensitiesSum(uint64_t time_now)
 {
-	float estimated_sum = float((1 - pow(Common::decay_factor, time_now + 1)) / (1 - Common::decay_factor)); // up from (8) - research paper
+	float estimated_sum = float((1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR)); // up from (8) - research paper
 	return estimated_sum;
 }
 

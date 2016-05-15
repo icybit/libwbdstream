@@ -21,7 +21,7 @@
 #define GRIDS "grids"
 #define NO_OF_CYCLES 20000000
 #define STEP 1
-#define TOTAL_GRIDS DIMENSIONS*DIMENSIONS
+#define TOTAL_GRIDS 100
 #define R_EARTH 6371000 
 
 #define NO_CLASS 0
@@ -36,20 +36,5 @@
 #define DENSE 8
 #define DENSE_FROM_TRANSITIONAL 9
 #define INITIAL 10
-
-class Common
-{
-public:
-	static float c_l;
-	static float c_m;
-	static float decay_factor;
-	static int total_grids;
-
-	static void InitParams(float c_l, float c_m, float decay_factor, int total_grids);
-	static void InitTotalGrids(int total_grids);
-
-};
-
-
 
 #endif /* __DSTREAM_COMMON_H__ */
