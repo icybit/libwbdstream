@@ -65,7 +65,7 @@ void CharacteristicVector::Merge(uint8_t * buffer)
 
 void CharacteristicVector::Print()
 {
-	printf("Time updated: %llu , density: %4.4f, label: %u, status: %d, changed: %d.\n", (unsigned long long)this->time_updated_, this->density_, this->label_, this->status_, this->changed_);
+	printf("Time updated: %llu, density: %4.4f, label: %u, status: %d, changed: %d.\n", (unsigned long long)this->time_updated_, this->density_, this->label_, this->status_, this->changed_);
 }
 
 void CharacteristicVector::Serialize(uint8_t * buffer)

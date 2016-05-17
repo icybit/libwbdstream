@@ -14,12 +14,12 @@ extern "C" {
 #include <unordered_map>
 	typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 	typedef std::unordered_map<unsigned int, Cluster *> Clusters;
-#endif
-
+#endif	
 	void dstream_clusterize(unsigned char * buffer, uint32_t buffer_size);
 	int dstream_calculate_gap_time();
 	double * dstream_calculate_xy_coords(double dx, double dy);
 	double * dstream_calculate_xy_distances(double x, double y);
+	void dstream_init_params(float c_m, float c_l, float decay_factor, uint64_t total_grids);
 
 #ifdef __cplusplus
 }

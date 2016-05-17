@@ -19,6 +19,7 @@
 #include "Cluster.h"
 #include "Common.h"
 #include "Key.h"
+#include "Parameters.h"
 
 typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
@@ -55,7 +56,7 @@ DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 	In that case gap time is too small to recluster every time.
 	Now we count only decay factor - time for dense grid to decay to sparse.*/
 	int gap = 0;
-	double dense_to_sparse = log(C_L / C_M) / log(DECAY_FACTOR);/* (11) - research paper*/
+	double dense_to_sparse = log(Parameters::c_l / Parameters::c_m) / log(Parameters::decay_factor);/* (11) - research paper*/
 	gap = (int)floor(dense_to_sparse);
 	return gap;
 }
@@ -187,11 +188,9 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_n
 /* Calculate Dm and Dl;*/
 void CalculateDensityParams(float & d_m, float & d_l)
 {
-	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
-	d_m = C_M / denumerator;
-	d_l = C_L / denumerator;
-	printf("Cm: %4.4f, Cl: %4.4f\n", C_M, C_L);
-	printf("Dm: %4.4f, Dl: %4.4f\n", d_m, d_l);
+	float denumerator = Parameters::total_grids * (1 - Parameters::decay_factor);
+	d_m = Parameters::c_m / denumerator;
+	d_l = Parameters::c_l / denumerator;
 }
 
 void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
@@ -461,8 +460,8 @@ float DensityThresholdFunction(uint64_t time_updated, uint64_t time_now)
 {
 	float threshold = 0.0f;
 	/* (27) - research paper */
-	float numerator = float(C_L * (1 - pow(DECAY_FACTOR, time_now - time_updated + 1)));
-	float denumerator = TOTAL_GRIDS * (1 - DECAY_FACTOR);
+	float numerator = float(Parameters::c_l * (1 - pow(Parameters::decay_factor, time_now - time_updated + 1)));
+	float denumerator = Parameters::total_grids * (1 - Parameters::decay_factor);
 	threshold = numerator / denumerator;
 	return threshold;
 }
@@ -486,7 +485,7 @@ void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gr
 		memcpy(&y, &buffer[index], sizeof(float));
 		index += sizeof(float);
 		index += sizeof(nullptr);
-		memcpy(&char_vect[0], &buffer[index], CHAR_VECT_SIZE);
+		memcpy(char_vect, &buffer[index], CHAR_VECT_SIZE);
 		index += CHAR_VECT_SIZE;
 		key = Key(x, y);
 		grid_list[key] = new CharacteristicVector(char_vect);
@@ -495,7 +494,7 @@ void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gr
 
 float EstimatedDensitiesSum(uint64_t time_now)
 {
-	float estimated_sum = float((1 - pow(DECAY_FACTOR, time_now + 1)) / (1 - DECAY_FACTOR)); // up from (8) - research paper
+	float estimated_sum = float((1 - pow(Parameters::decay_factor, time_now + 1)) / (1 - Parameters::decay_factor)); // up from (8) - research paper
 	return estimated_sum;
 }
 
@@ -551,13 +550,13 @@ uint32_t LabelHash(Key & key)
 void MergeChangesToBuffer(uint8_t * buffer, uint32_t buffer_size, Gridlist & grid_list)
 {
 	CharacteristicVector * vect;
-	CharacteristicVector * vect_empty;
+	CharacteristicVector vect_empty;
 	float x, y;
 	Key key;
 	uint8_t char_vect[CHAR_VECT_SIZE];
 	uint32_t index = 0;
 
-	vect_empty = new CharacteristicVector();
+	vect_empty = CharacteristicVector();
 
 	/*Skips time_now*/
 	index += sizeof(uint64_t);
@@ -577,13 +576,12 @@ void MergeChangesToBuffer(uint8_t * buffer, uint32_t buffer_size, Gridlist & gri
 		}
 		else
 		{
-			vect_empty->Serialize(char_vect);
+			vect_empty.Serialize(char_vect);
 		}
 
-		memcpy(&buffer[index], &char_vect[0], CHAR_VECT_SIZE);
+		memcpy(&buffer[index], char_vect, CHAR_VECT_SIZE);
 		index += CHAR_VECT_SIZE;
 	}
-	delete vect_empty;
 }
 
 /* Merges two clusters and deletes the second one. */
@@ -687,7 +685,6 @@ void PrintTable(Gridlist & grid_list, uint64_t time_now)
 	}
 	std::cout << std::setprecision(7) << std::endl;
 	std::cout << "Time now: " << time_now << " (+1)." << std::endl;
-	std::cout << "Cycles: " << NO_OF_CYCLES << std::endl;
 	std::cout << "Sum: " << sum << std::endl;
 	std::cout << "Estimated sum: " << EstimatedDensitiesSum(time_now) << std::endl;
 }
