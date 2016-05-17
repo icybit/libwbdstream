@@ -75,6 +75,11 @@ DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 	return distances;
 }
 
+DSTREAM_PUBLIC void dstream_init_params(float c_m, float c_l, float decay_factor, uint64_t total_grids)
+{
+	Parameters::InitParams(c_m, c_l, decay_factor, total_grids);
+}
+
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
 {
 	uint8_t status;

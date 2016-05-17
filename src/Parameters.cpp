@@ -16,8 +16,3 @@ void Parameters::InitParams(float c_m, float c_l, float decay_factor, uint64_t t
 	Parameters::decay_factor = decay_factor;
 	Parameters::total_grids = total_grids;
 }
-
-DSTREAM_PUBLIC void dstream_init_params(float c_m, float c_l, float decay_factor, uint64_t total_grids)
-{
-	Parameters::InitParams(c_m, c_l, decay_factor, total_grids);
-}
