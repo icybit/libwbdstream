@@ -24,21 +24,23 @@
 typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
-
-DSTREAM_PUBLIC uint8_t * dstream_clusterize(uint8_t * buffer, uint32_t buffer_size, uint32_t * output_buffer_size)
+DSTREAM_PUBLIC uint8_t ** dstream_clusterize(uint8_t * buffer, uint32_t buffer_size, uint32_t * output_size)
 {
 	Clusters clusters;
 	float d_m, d_l;
 	Gridlist grid_list;
 	uint64_t time_now;
-	uint8_t * output_buffer;
+	uint8_t ** output_buffer;
+
+	output_buffer = (uint8_t **)malloc(2 * sizeof(void *));
 
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	MergeChangesToBuffer(buffer, buffer_size, grid_list);
-	output_buffer = SerializeClusters(clusters, output_buffer_size);
+	output_buffer[0] = SerializeClusters(clusters, output_size[0]);
+	output_buffer[1] = SerializeGrids(grid_list, output_size[1]);
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
@@ -79,9 +81,9 @@ DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 	return distances;
 }
 
-DSTREAM_PUBLIC void dstream_init_params(float c_m, float c_l, float decay_factor, uint64_t total_grids)
+DSTREAM_PUBLIC void dstream_init_params(float c_m, float c_l, float decay_factor, uint64_t total_grids, uint32_t distance)
 {
-	Parameters::InitParams(c_m, c_l, decay_factor, total_grids);
+	Parameters::InitParams(c_m, c_l, decay_factor, total_grids, distance);
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
@@ -253,16 +255,16 @@ void CallClusteringOnGrid(Key grid, Gridlist & grid_list, Clusters & clusters)
 
 void CalculateXYCoords(double dx, double dy, double & x, double & y)
 {
-	y = 360 * dy / (2 * M_PI * R_EARTH);
-	double ry = y * M_PI / 180;
+	y = 360 * dy * Parameters::distance / (2 * M_PI * R_EARTH);
+	double ry = abs(y) * M_PI / 180;
 	double r = sin(M_PI_2 - ry) * R_EARTH;
-	x = 360 * dx / (2 * M_PI * r);
+	x = 360 * dx * Parameters::distance / (2 * M_PI * r);
 }
 
 void CalculateXYDistances(double x, double y, double & dx, double & dy)
 {
 	dy = (2 * M_PI * R_EARTH * y) / 360;
-	double ry = y * M_PI / 180;
+	double ry = abs(y) * M_PI / 180;
 	double r = sin(M_PI_2 - ry) * R_EARTH;
 	dx = (2 * M_PI * r * x) / 360;
 }
@@ -374,11 +376,12 @@ void CheckNeighborsConnectivity(Key grid, Gridlist & grid_list, Clusters & clust
 	}
 }
 
-std::string CreateClustersJsonStringGrids(Clusters & clusters, float lat, float lng) {
+std::string CreateClustersJsonString(Clusters & clusters) {
 
 	std::stringstream ss;
 	std::string str;
-
+	float x_low, y_low, x_high, y_high;
+	double x_l, y_l, x_h, y_h;
 	ss << std::fixed << std::setprecision(6);
 
 	ss << "{\"channel\":\"" << CLUSTERS << "\",";
@@ -388,11 +391,18 @@ std::string CreateClustersJsonStringGrids(Clusters & clusters, float lat, float 
 	{
 		ss << "{\"ID\":" << it->first << ",";
 		ss << "\"grids\": [";
-		for (auto it_vect = it->second->get_begin_iterator(); it_vect != it->second->get_end_iterator(); ++it_vect)
+		for (auto it_grids = it->second->get_begin_iterator(); it_grids != it->second->get_end_iterator(); ++it_grids)
 		{
-			ss << "{\"lat\":" << lat + it_vect->y / 1000 * 0.8 << ",\"lng\":" << lng + it_vect->x / 1000
-				/*<< ",\"density\":" << it_vect->density_status*/
-				<< "},";
+			x_low = it_grids->x;
+			y_low = it_grids->y;
+			CalculateXYCoords(x_low, y_low, x_l, y_l);
+			CalculateXYCoords(x_low + 1, x_low + 1, x_h, y_h);
+			x_low = (float)x_l;
+			x_high = (float)x_h;
+			y_low = (float)y_l;
+			y_high = (float)y_h;
+			ss << "{{\"lat\":" << y_low << ",\"lng\":" << x_low << "},";
+			ss << "{\"lat\":" << y_high << ",\"lng\":" << x_high << "}}";
 		}
 		ss.seekp(-1, ss.cur);
 		ss << "]},";
@@ -420,10 +430,13 @@ std::string CreateCoordsJsonString(float lat, float lng)
 	return str;
 }
 
-std::string CreateGridsJsonString(Gridlist & grid_list, float lat, float lng) {
-	std::stringstream ss;
-	std::string str;
+std::string CreateGridsJsonString(Gridlist & grid_list) {
+	double x_l, y_l, x_h, y_h;
+	float x_low, y_low, x_high, y_high;	
 	Key key;
+	std::string str;
+	std::stringstream ss;
+
 	ss << std::fixed << std::setprecision(6);
 
 	ss << "{\"channel\":\"" << GRIDS << "\",";
@@ -432,7 +445,18 @@ std::string CreateGridsJsonString(Gridlist & grid_list, float lat, float lng) {
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
 		key = Key(it->first.x_, it->first.y_);
-		ss << "{\"lat\":" << lat + it->first.y_ / 1000 * 0.8 << ",\"lng\":" << lng + it->first.x_ / 1000
+
+		x_low = it->first.x_;
+		y_low = it->first.y_;
+		CalculateXYCoords(x_low, y_low, x_l, y_l);
+		CalculateXYCoords(x_low + 1, x_low + 1, x_h, y_h);
+		x_low = (float)x_l;
+		x_high = (float)x_h;
+		y_low = (float)y_l;
+		y_high = (float)y_h;
+		
+		ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "}"
+			<< "{\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}"
 			<< ",\"density\":" << it->second->get_density() << ",\"status\":" << (int)it->second->get_status()
 			<< ",\"label\":" << it->second->get_label() << ",\"hash\":" << LabelHash(key) << "},";
 
@@ -937,45 +961,29 @@ void SplitCluster(Clusters & clusters, Gridlist & grid_list, std::vector<int> ch
 	}
 }
 
-uint8_t * SerializeClusters(Clusters & clusters, uint32_t * buffer_size)
+uint8_t * SerializeClusters(Clusters & clusters, uint32_t & buffer_size)
 {
-	int index = 0;
-	uint32_t n_grids;
+	std::string clusters_JSON;
 	uint8_t * buffer;
-	float x_low, y_low, x_high, y_high;
-	double x_l, y_l, x_h, y_h;
 
-	n_grids = GetAmountOfGridsInClusters(clusters);
-	*buffer_size = clusters.size() * (sizeof(uint64_t) + sizeof(uint32_t)) + 4 * sizeof(float) * n_grids;
-	buffer = (uint8_t *)malloc(*buffer_size);
+	clusters_JSON = CreateClustersJsonString(clusters);
+	buffer_size = clusters_JSON.size();
+	buffer = (uint8_t *)malloc(buffer_size);
+	memcpy(buffer, clusters_JSON.c_str(), buffer_size);
+	
+	return buffer;
+}
 
-	for (auto it = clusters.begin(); it != clusters.end(); ++it)
-	{
-		memcpy(&buffer[index], &it->first, sizeof(uint64_t));
-		index += sizeof(uint64_t);
-		uint32_t clusters_size = it->second->get_size();
-		memcpy(&buffer[index], &clusters_size, sizeof(uint32_t));
-		index += sizeof(uint32_t);
-		for (auto it_grids = it->second->get_begin_iterator(); it_grids != it->second->get_end_iterator(); ++it_grids)
-		{
-			x_low = it_grids->x;
-			y_low = it_grids->y;
-			CalculateXYCoords(x_low, y_low, x_l, y_l);
-			CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
-			x_low = x_l;
-			y_low = y_l;
-			x_high = x_h;
-			y_high = y_h;
-			memcpy(&buffer[index], &x_low, sizeof(float));
-			index += sizeof(float);
-			memcpy(&buffer[index], &y_low, sizeof(float));
-			index += sizeof(float);
-			memcpy(&buffer[index], &x_high, sizeof(float));
-			index += sizeof(float);
-			memcpy(&buffer[index], &y_high, sizeof(float));
-			index += sizeof(float);
-		}
-	}
+uint8_t * SerializeGrids(Gridlist & grid_list, uint32_t & buffer_size)
+{
+	std::string grids_JSON;
+	uint8_t * buffer;
+
+	grids_JSON = CreateGridsJsonString(grid_list);
+	buffer_size = grids_JSON.size();
+	buffer = (uint8_t *)malloc(buffer_size);
+	memcpy(buffer, grids_JSON.c_str(), buffer_size);
+
 	return buffer;
 }
 
@@ -1000,14 +1008,3 @@ void UpdateDensities(Gridlist & grid_list, uint64_t time_now, float d_m, float d
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-

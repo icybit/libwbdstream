@@ -7,12 +7,14 @@
 float Parameters::c_l = C_L;
 float Parameters::c_m = C_M;
 float Parameters::decay_factor = DECAY_FACTOR;
+uint32_t Parameters::distance = DISTANCE;
 uint64_t Parameters::total_grids = TOTAL_GRIDS;
 
-void Parameters::InitParams(float c_m, float c_l, float decay_factor, uint64_t total_grids)
+void Parameters::InitParams(float c_m, float c_l, float decay_factor, uint64_t total_grids, uint32_t distance)
 {
 	Parameters::c_l = c_l;
 	Parameters::c_m = c_m;
 	Parameters::decay_factor = decay_factor;
 	Parameters::total_grids = total_grids;
+	Parameters::distance = distance;
 }
