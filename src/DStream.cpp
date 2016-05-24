@@ -455,8 +455,8 @@ std::string CreateGridsJsonString(Gridlist & grid_list) {
 		y_low = (float)y_l;
 		y_high = (float)y_h;
 		
-		ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "}"
-			<< "{\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}"
+		ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},"
+			<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}"
 			<< ",\"density\":" << it->second->get_density() << ",\"status\":" << (int)it->second->get_status()
 			<< ",\"label\":" << it->second->get_label() << ",\"hash\":" << LabelHash(key) << "},";
 
@@ -968,8 +968,9 @@ uint8_t * SerializeClusters(Clusters & clusters, uint32_t & buffer_size)
 
 	clusters_JSON = CreateClustersJsonString(clusters);
 	buffer_size = clusters_JSON.size();
-	buffer = (uint8_t *)malloc(buffer_size);
+	buffer = (uint8_t *)malloc(buffer_size + 1);
 	memcpy(buffer, clusters_JSON.c_str(), buffer_size);
+	memcpy(&buffer[buffer_size], "\0", 1);
 	
 	return buffer;
 }
@@ -981,8 +982,9 @@ uint8_t * SerializeGrids(Gridlist & grid_list, uint32_t & buffer_size)
 
 	grids_JSON = CreateGridsJsonString(grid_list);
 	buffer_size = grids_JSON.size();
-	buffer = (uint8_t *)malloc(buffer_size);
+	buffer = (uint8_t *)malloc(buffer_size + 1);
 	memcpy(buffer, grids_JSON.c_str(), buffer_size);
+	memcpy(&buffer[buffer_size], "\0", 1);
 
 	return buffer;
 }
