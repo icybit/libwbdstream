@@ -15,7 +15,7 @@ extern "C" {
 	typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 	typedef std::unordered_map<unsigned int, Cluster *> Clusters;
 #endif	
-	void dstream_clusterize(unsigned char * buffer, uint32_t buffer_size);
+	uint8_t * dstream_clusterize(unsigned char * buffer, uint32_t buffer_size, uint32_t * output_buffer_size);
 	int dstream_calculate_gap_time();
 	double * dstream_calculate_xy_coords(double dx, double dy);
 	double * dstream_calculate_xy_distances(double x, double y);

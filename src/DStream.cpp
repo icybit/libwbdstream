@@ -25,17 +25,20 @@ typedef std::unordered_map<Key, CharacteristicVector * > Gridlist;
 typedef std::unordered_map<uint32_t, Cluster *> Clusters;
 
 
-DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
+DSTREAM_PUBLIC uint8_t * dstream_clusterize(uint8_t * buffer, uint32_t buffer_size, uint32_t * output_buffer_size)
 {
-	uint64_t time_now;
-	Gridlist grid_list;
 	Clusters clusters;
 	float d_m, d_l;
+	Gridlist grid_list;
+	uint64_t time_now;
+	uint8_t * output_buffer;
+
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
 	CalculateDensityParams(d_m, d_l);
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	MergeChangesToBuffer(buffer, buffer_size, grid_list);
+	output_buffer = SerializeClusters(clusters, output_buffer_size);
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
@@ -48,6 +51,7 @@ DSTREAM_PUBLIC void dstream_clusterize(uint8_t * buffer, uint32_t buffer_size)
 	/*
 	Clusters need to be pushed to key-value store;
 	*/
+	return output_buffer;
 }
 
 DSTREAM_PUBLIC int dstream_calculate_gap_time() {
@@ -63,14 +67,14 @@ DSTREAM_PUBLIC int dstream_calculate_gap_time() {
 
 DSTREAM_PUBLIC double * dstream_calculate_xy_coords(double dx, double dy)
 {
-	double * coords = new double[2];
+	double * coords = (double *)malloc(2 * sizeof(double));
 	CalculateXYCoords(dx, dy, coords[0], coords[1]);
 	return coords;
 }
 
 DSTREAM_PUBLIC double * dstream_calculate_xy_distances(double x, double y)
 {
-	double * distances = new double[2];
+	double * distances = (double *)malloc(2 * sizeof(double));
 	CalculateXYDistances(x, y, distances[0], distances[1]);
 	return distances;
 }
@@ -81,13 +85,13 @@ DSTREAM_PUBLIC void dstream_init_params(float c_m, float c_l, float decay_factor
 }
 
 void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_now, float d_m, float d_l)
-{
-	uint8_t status;
-	GridTuple grid;
+{	
 	CharacteristicVector * vect;
+	GridTuple grid;
 	Key key;
 	Key key_neighbor;
 	uint32_t label;
+	uint8_t status;
 
 	RemoveSporadic(grid_list, time_now);
 	UpdateDensities(grid_list, time_now, d_m, d_l);
@@ -166,7 +170,7 @@ void AdjustClustering(Gridlist & grid_list, Clusters & clusters, uint64_t time_n
 					vect->set_label(label);
 					CallClusteringOnGrid(key, grid_list, clusters);
 				}
-				/* If it belongs to cluster, update neighbors neighboring scores*/
+				/* If it belongs to cluster, update neighbors*/
 				else
 				{
 					/* This whole branch might be unnecessary. If dense grid has label - it means, it was added to cluster. 
@@ -527,6 +531,16 @@ void GenerateRandomPair(float & x, float & y, int counter, std::vector<Key> & po
 		y = points[index].y_ + y_diff;
 	}
 
+}
+
+uint32_t GetAmountOfGridsInClusters(Clusters & clusters)
+{
+	uint32_t n_grids = 0;
+	for (auto it = clusters.begin(); it != clusters.end(); ++it)
+	{
+		n_grids += it->second->get_size();
+	}
+	return n_grids;
 }
 
 void GetNeighbors(float x, float y, Key neighbors[4]) {
@@ -921,6 +935,48 @@ void SplitCluster(Clusters & clusters, Gridlist & grid_list, std::vector<int> ch
 	{
 		RenameCluster(clusters, grid_list, new_labels[i]);
 	}
+}
+
+uint8_t * SerializeClusters(Clusters & clusters, uint32_t * buffer_size)
+{
+	int index = 0;
+	uint32_t n_grids;
+	uint8_t * buffer;
+	float x_low, y_low, x_high, y_high;
+	double x_l, y_l, x_h, y_h;
+
+	n_grids = GetAmountOfGridsInClusters(clusters);
+	*buffer_size = clusters.size() * (sizeof(uint64_t) + sizeof(uint32_t)) + 4 * sizeof(float) * n_grids;
+	buffer = (uint8_t *)malloc(*buffer_size);
+
+	for (auto it = clusters.begin(); it != clusters.end(); ++it)
+	{
+		memcpy(&buffer[index], &it->first, sizeof(uint64_t));
+		index += sizeof(uint64_t);
+		uint32_t clusters_size = it->second->get_size();
+		memcpy(&buffer[index], &clusters_size, sizeof(uint32_t));
+		index += sizeof(uint32_t);
+		for (auto it_grids = it->second->get_begin_iterator(); it_grids != it->second->get_end_iterator(); ++it_grids)
+		{
+			x_low = it_grids->x;
+			y_low = it_grids->y;
+			CalculateXYCoords(x_low, y_low, x_l, y_l);
+			CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
+			x_low = x_l;
+			y_low = y_l;
+			x_high = x_h;
+			y_high = y_h;
+			memcpy(&buffer[index], &x_low, sizeof(float));
+			index += sizeof(float);
+			memcpy(&buffer[index], &y_low, sizeof(float));
+			index += sizeof(float);
+			memcpy(&buffer[index], &x_high, sizeof(float));
+			index += sizeof(float);
+			memcpy(&buffer[index], &y_high, sizeof(float));
+			index += sizeof(float);
+		}
+	}
+	return buffer;
 }
 
 void UpdateDensities(Gridlist & grid_list, uint64_t time_now, float d_m, float d_l)

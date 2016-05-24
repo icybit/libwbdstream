@@ -28,6 +28,7 @@ float DensityThresholdFunction(uint64_t time_updated, uint64_t time_now);
 void Deserialize(uint8_t * buffer, uint32_t buffer_size, uint64_t & time_now, Gridlist & grid_list);
 float EstimatedDensitiesSum(uint64_t time_now);
 void GenerateRandomPair(float & x, float & y, int counter, std::vector<Key> & points);
+uint32_t GetAmountOfGridsInClusters(Clusters & clusters);
 void GetNeighbors(float x, float y, Key neighbors[4]);
 bool IsSporadic(float density, uint64_t time_updated, uint64_t time_now);
 uint32_t LabelHash(Key & key);
@@ -42,6 +43,7 @@ void RelabelNeighbors(Key key, Gridlist & grid_list, uint32_t old_label, uint32_
 void RemoveEmptyClusters(Clusters & clusters);
 void RemoveSporadic(Gridlist & grid_list, uint64_t time_now);
 bool RenameCluster(Clusters & clusters, Gridlist & grid_list, uint32_t label);
+uint8_t * SerializeClusters(Clusters & clusters, uint32_t * buffer_size);
 void SplitCluster(Clusters & clusters, Gridlist & grid_list, std::vector<int> checklist, uint32_t label, int count);
 void UpdateDensities(Gridlist & grid_list, uint64_t time_now, float d_m, float d_l);
 
