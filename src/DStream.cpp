@@ -396,7 +396,7 @@ std::string CreateClustersJsonString(Clusters & clusters) {
 			x_low = it_grids->x;
 			y_low = it_grids->y;
 			CalculateXYCoords(x_low, y_low, x_l, y_l);
-			CalculateXYCoords(x_low + 1, x_low + 1, x_h, y_h);
+			CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
 			x_low = (float)x_l;
 			x_high = (float)x_h;
 			y_low = (float)y_l;
@@ -449,7 +449,7 @@ std::string CreateGridsJsonString(Gridlist & grid_list) {
 		x_low = it->first.x_;
 		y_low = it->first.y_;
 		CalculateXYCoords(x_low, y_low, x_l, y_l);
-		CalculateXYCoords(x_low + 1, x_low + 1, x_h, y_h);
+		CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
 		x_low = (float)x_l;
 		x_high = (float)x_h;
 		y_low = (float)y_l;
