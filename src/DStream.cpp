@@ -384,8 +384,7 @@ std::string CreateClustersJsonString(Clusters & clusters) {
 	double x_l, y_l, x_h, y_h;
 	ss << std::fixed << std::setprecision(6);
 
-	ss << "{\"channel\":\"" << CLUSTERS << "\",";
-	ss << "\"clusters\": [";
+	ss << "{\"clusters\": [";
 
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
@@ -439,8 +438,7 @@ std::string CreateGridsJsonString(Gridlist & grid_list) {
 
 	ss << std::fixed << std::setprecision(6);
 
-	ss << "{\"channel\":\"" << GRIDS << "\",";
-	ss << "\"grids\": [";
+	ss << "{\"grids\": [";
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
