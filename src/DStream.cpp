@@ -401,8 +401,8 @@ std::string CreateClustersJsonString(Clusters & clusters) {
 			x_high = (float)x_h;
 			y_low = (float)y_l;
 			y_high = (float)y_h;
-			ss << "{{\"lat\":" << y_low << ",\"lng\":" << x_low << "},";
-			ss << "{\"lat\":" << y_high << ",\"lng\":" << x_high << "}}";
+			ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},";
+			ss << "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}},";
 		}
 		ss.seekp(-1, ss.cur);
 		ss << "]},";
@@ -456,8 +456,8 @@ std::string CreateGridsJsonString(Gridlist & grid_list) {
 		y_high = (float)y_h;
 		
 		ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},"
-			<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}"
-			<< ",\"density\":" << it->second->get_density() << ",\"status\":" << (int)it->second->get_status()
+			<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "},"
+			<< "\"density\":" << it->second->get_density() << ",\"status\":" << (int)it->second->get_status()
 			<< ",\"label\":" << it->second->get_label() << ",\"hash\":" << LabelHash(key) << "},";
 
 	}
