@@ -39,7 +39,7 @@ DSTREAM_PUBLIC uint8_t ** dstream_clusterize(uint8_t * buffer, uint32_t buffer_s
 	CalculateDensityParams(d_m, d_l);
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	MergeChangesToBuffer(buffer, buffer_size, grid_list);
-	output_buffer[0] = SerializeClusters(clusters, output_size[0]);
+	output_buffer[0] = SerializeClusters(clusters, grid_list, output_size[0]);
 	output_buffer[1] = SerializeGrids(grid_list, output_size[1]);
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
@@ -376,8 +376,10 @@ void CheckNeighborsConnectivity(Key grid, Gridlist & grid_list, Clusters & clust
 	}
 }
 
-std::string CreateClustersJsonString(Clusters & clusters) {
+std::string CreateClustersJsonString(Clusters & clusters, Gridlist & grid_list) {
 
+	CharacteristicVector * vect;
+	Key key;
 	std::stringstream ss;
 	std::string str;
 	float x_low, y_low, x_high, y_high;
@@ -394,14 +396,20 @@ std::string CreateClustersJsonString(Clusters & clusters) {
 		{
 			x_low = it_grids->x;
 			y_low = it_grids->y;
+			key = Key(x_low, y_low);
+			vect = grid_list[key];
 			CalculateXYCoords(x_low, y_low, x_l, y_l);
 			CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
 			x_low = (float)x_l;
 			x_high = (float)x_h;
 			y_low = (float)y_l;
 			y_high = (float)y_h;
-			ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},";
-			ss << "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}},";
+			ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},"
+				<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "},"
+				<< "\"data\":{"
+				<< "\"density\":" << vect->get_density() << ",\"status\":" << (int)vect->get_status()
+				<< ",\"label\":" << vect->get_label() << ",\"hash\":" << LabelHash(key) << "}},";
+
 		}
 		ss.seekp(-1, ss.cur);
 		ss << "]},";
@@ -959,12 +967,12 @@ void SplitCluster(Clusters & clusters, Gridlist & grid_list, std::vector<int> ch
 	}
 }
 
-uint8_t * SerializeClusters(Clusters & clusters, uint32_t & buffer_size)
+uint8_t * SerializeClusters(Clusters & clusters, Gridlist & grid_list, uint32_t & buffer_size)
 {
 	std::string clusters_JSON;
 	uint8_t * buffer;
 
-	clusters_JSON = CreateClustersJsonString(clusters);
+	clusters_JSON = CreateClustersJsonString(clusters, grid_list);
 	buffer_size = clusters_JSON.size();
 	buffer = (uint8_t *)malloc(buffer_size + 1);
 	memcpy(buffer, clusters_JSON.c_str(), buffer_size);

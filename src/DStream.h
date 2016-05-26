@@ -20,7 +20,7 @@ void CalculateXYDistances(double x, double y, double & dx, double & dy);
 bool CheckForDenseNeighbors(Key & key, Gridlist & grid_list);
 bool CheckIfConnected(Clusters & clusters, Gridlist & grid_list, uint32_t label);
 void CheckNeighborsConnectivity(Key grid, Gridlist & grid_list, Clusters & clusters);
-std::string CreateClustersJsonString(Clusters & clusters);
+std::string CreateClustersJsonString(Clusters & clusters, Gridlist & grid_list);
 std::string CreateCoordsJsonString(float lat, float lng);
 std::string CreatePathJsonString(std::vector<Key> & path, uint32_t label);
 std::string CreateGridsJsonString(Gridlist & grid_list);
@@ -43,7 +43,7 @@ void RelabelNeighbors(Key key, Gridlist & grid_list, uint32_t old_label, uint32_
 void RemoveEmptyClusters(Clusters & clusters);
 void RemoveSporadic(Gridlist & grid_list, uint64_t time_now);
 bool RenameCluster(Clusters & clusters, Gridlist & grid_list, uint32_t label);
-uint8_t * SerializeClusters(Clusters & clusters, uint32_t & buffer_size);
+uint8_t * SerializeClusters(Clusters & clusters, Gridlist & grid_list, uint32_t & buffer_size);
 uint8_t * SerializeGrids(Gridlist & grid_list, uint32_t & buffer_size);
 void SplitCluster(Clusters & clusters, Gridlist & grid_list, std::vector<int> checklist, uint32_t label, int count);
 void UpdateDensities(Gridlist & grid_list, uint64_t time_now, float d_m, float d_l);
