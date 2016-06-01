@@ -32,7 +32,7 @@ DSTREAM_PUBLIC uint8_t ** dstream_clusterize(uint8_t * buffer, uint32_t buffer_s
 	uint64_t time_now;
 	uint8_t ** output_buffer;
 
-	output_buffer = (uint8_t **)malloc(2 * sizeof(void *));
+	output_buffer = (uint8_t **)malloc(sizeof(void *));
 
 	Deserialize(buffer, buffer_size, time_now, grid_list);
 	ReassembleClusters(grid_list, clusters);
@@ -40,7 +40,7 @@ DSTREAM_PUBLIC uint8_t ** dstream_clusterize(uint8_t * buffer, uint32_t buffer_s
 	AdjustClustering(grid_list, clusters, time_now, d_m, d_l);
 	MergeChangesToBuffer(buffer, buffer_size, grid_list);
 	output_buffer[0] = SerializeClusters(clusters, grid_list, output_size[0]);
-	output_buffer[1] = SerializeGrids(grid_list, output_size[1]);
+	/*output_buffer[1] = SerializeGrids(grid_list, output_size[1]);*/
 
 	for (auto it = grid_list.begin(); it != grid_list.end(); ++it)
 	{
@@ -384,12 +384,16 @@ std::string CreateClustersJsonString(Clusters & clusters, Gridlist & grid_list) 
 	std::string str;
 	float x_low, y_low, x_high, y_high;
 	double x_l, y_l, x_h, y_h;
+	double total_density;
+	int counter;
 	ss << std::fixed << std::setprecision(6);
 
 	ss << "{\"clusters\": [";
 
 	for (auto it = clusters.begin(); it != clusters.end(); ++it)
 	{
+		counter = 0;
+		total_density = 0;
 		ss << "{\"ID\":" << it->first << ",";
 		ss << "\"grids\": [";
 		for (auto it_grids = it->second->get_begin_iterator(); it_grids != it->second->get_end_iterator(); ++it_grids)
@@ -398,6 +402,10 @@ std::string CreateClustersJsonString(Clusters & clusters, Gridlist & grid_list) 
 			y_low = it_grids->y;
 			key = Key(x_low, y_low);
 			vect = grid_list[key];
+
+			counter++;
+			total_density = vect->get_density();
+
 			CalculateXYCoords(x_low, y_low, x_l, y_l);
 			CalculateXYCoords(x_low + 1, y_low + 1, x_h, y_h);
 			x_low = (float)x_l;
@@ -405,14 +413,11 @@ std::string CreateClustersJsonString(Clusters & clusters, Gridlist & grid_list) 
 			y_low = (float)y_l;
 			y_high = (float)y_h;
 			ss << "{\"low\":{\"lat\":" << y_low << ",\"lng\":" << x_low << "},"
-				<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "},"
-				<< "\"data\":{"
-				<< "\"density\":" << vect->get_density() << ",\"status\":" << (int)vect->get_status()
-				<< ",\"label\":" << vect->get_label() << ",\"hash\":" << LabelHash(key) << "}},";
+				<< "\"high\":{\"lat\":" << y_high << ",\"lng\":" << x_high << "}},";
 
 		}
 		ss.seekp(-1, ss.cur);
-		ss << "]},";
+		ss << "],\"density\":" << total_density / counter << "},";
 	}
 	if (clusters.size() > 0)
 	{
